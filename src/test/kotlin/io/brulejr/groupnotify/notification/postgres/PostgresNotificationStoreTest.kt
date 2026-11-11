@@ -1,0 +1,92 @@
+/*
+ * Copyright (c) 2026 Jon Brule
+ *
+ * Licensed under the MIT License; see LICENSE in the project root for the full
+ * license text.
+ *
+ * SPDX-License-Identifier: MIT
+ */
+package io.brulejr.groupnotify.notification.postgres
+
+import io.brulejr.groupnotify.notification.BodyFormat
+import io.brulejr.groupnotify.notification.Notification
+import io.brulejr.groupnotify.notification.NotificationDelivery
+import io.brulejr.groupnotify.notification.NotificationStatus
+import io.brulejr.groupnotify.notification.Schedule
+import io.brulejr.groupnotify.notification.ScheduleKind
+import io.brulejr.groupnotify.platform.PostgresTestDatabase
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.testcontainers.junit.jupiter.Testcontainers
+import tools.jackson.databind.json.JsonMapper
+import java.time.Instant
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
+import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+@Testcontainers(disabledWithoutDocker = true)
+class PostgresNotificationStoreTest {
+
+    private val store = PostgresNotificationStore(PostgresTestDatabase.jdbc, PostgresTestDatabase.transactions, JsonMapper.builder().build())
+    private val now = Instant.now().truncatedTo(ChronoUnit.MICROS)
+
+    private fun notification(group: String = "notify_club", next: Instant? = now.minusSeconds(5)) = Notification(
+        id = UUID.randomUUID(), group = group, title = "t", subject = "s", body = "**b**", format = BodyFormat.MARKDOWN,
+        schedule = Schedule(ScheduleKind.RECURRING, ZoneId.of("America/New_York"), cron = "0 9 * * *"),
+        status = NotificationStatus.ACTIVE,
+        deliveries = listOf(
+            NotificationDelivery(UUID.randomUUID(), "discord", mapOf("webhookUrl" to "https://x/y"), "Members"),
+            NotificationDelivery(UUID.randomUUID(), "sms", mapOf("to" to "+15551234567"), enabled = false),
+        ),
+        nextRunAt = next, lastRunAt = null, createdBy = "alice", createdAt = now, updatedBy = "alice", updatedAt = now,
+    )
+
+    @BeforeEach
+    fun reset() = PostgresTestDatabase.reset()
+
+    @Test
+    fun `a notification and its deliveries come back as saved, in order`() {
+        val n = notification()
+        store.save(n)
+
+        assertEquals(n, store.find(n.id))
+        store.save(n.copy(title = "renamed", deliveries = n.deliveries.reversed()))
+        assertEquals(listOf("sms", "discord"), store.find(n.id)!!.deliveries.map { it.plugin })
+    }
+
+    @Test
+    fun `lists are limited to the groups asked for`() {
+        store.save(notification("notify_club"))
+        store.save(notification("notify_family"))
+
+        assertEquals(2, store.list(null).size)
+        assertEquals(listOf("notify_family"), store.list(setOf("notify_family")).map { it.group })
+        assertEquals(emptyList(), store.list(emptySet()))
+        assertEquals(setOf("notify_club", "notify_family"), store.groups())
+    }
+
+    @Test
+    fun `due notifications are moved on only if still due when expected`() {
+        val n = notification()
+        store.save(n)
+        assertEquals(listOf(n.id), store.due(now, 10).map { it.id })
+
+        assertTrue(store.advance(n.id, n.nextRunAt!!, now.plusSeconds(3600), NotificationStatus.ACTIVE, now))
+        assertFalse(store.advance(n.id, n.nextRunAt!!, null, NotificationStatus.COMPLETED, now), "a second run of the same time loses")
+        assertTrue(store.due(now, 10).isEmpty())
+    }
+
+    @Test
+    fun `deleting takes the deliveries with it`() {
+        val n = notification()
+        store.save(n)
+
+        assertTrue(store.delete(n.id))
+        assertNull(store.find(n.id))
+        assertEquals(0L, PostgresTestDatabase.jdbc.sql("SELECT count(*) FROM deliveries").query(Long::class.java).single())
+    }
+}

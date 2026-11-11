@@ -1,0 +1,159 @@
+spring.application.name: group-notify-manager
+spring.profiles.active: ${PROFILE:local}
+
+info:
+  app:
+    name: ${spring.application.name}
+    description: Scheduled group notifications over groups.io, email, Discord, SMS and plugins
+    profile: ${spring.profiles.active}
+
+server:
+  # 5002: iot-pipeline and oiltank-monitor already use 5001 locally.
+  port: ${SERVER_PORT:5002}
+  # Traefik terminates TLS; this makes redirects and OIDC callbacks use https and the
+  # public host name.
+  forward-headers-strategy: framework
+  error:
+    # So a refusal says why, e.g. "You may not change this notification".
+    include-message: always
+
+spring:
+  # PostgreSQL, holding notifications and the audit trail. Nothing connects until a
+  # feature that uses it starts; see DatabaseMigrator.
+  datasource:
+    # The database and credentials are deliberately not defaulted. A default would point
+    # at whatever listens on localhost:5432, which may be another database entirely;
+    # failing to start is the safer outcome. Export the variables from .env
+    # (`set -a; . ./.env; set +a`) or set spring.datasource.* in application-local.yml.
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB}
+    username: ${POSTGRES_APP_USERNAME}
+    password: ${POSTGRES_APP_PASSWORD}
+    hikari:
+      # Every connection works in the application's own schema, so its SQL names none.
+      schema: ${notify.database.schema}
+
+  # The SMTP server the email and groups.io plugins send through. Without a host they
+  # load but report themselves not ready. docker/dev runs Mailpit on 1025 for testing.
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${MAIL_SMTP_AUTH:true}
+      mail.smtp.starttls.enable: ${MAIL_STARTTLS:true}
+      mail.smtp.connectiontimeout: 10000
+      mail.smtp.timeout: 20000
+      mail.smtp.writetimeout: 20000
+
+  # Used only with notify.security.mode=oidc; see docs/security.md.
+  # security.oauth2.client:
+  #   registration.authelia:
+  #     client-id: group-notify
+  #     client-secret: ${OIDC_CLIENT_SECRET}
+  #     scope: [openid, profile, email, groups]
+  #     authorization-grant-type: authorization_code
+  #     redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+  #   provider.authelia.issuer-uri: https://auth.example.org
+
+notify:
+  # The PostgreSQL schema holding every table of this application, created by its first
+  # migration. Its own rather than `public`, so the database can be shared.
+  database:
+    schema: group_notify
+
+  # Authelia signs people in. forward-auth trusts the Remote-* headers Traefik copies
+  # from Authelia, as iot-pipeline does; oidc signs in as an OIDC client instead.
+  security:
+    mode: ${AUTH_MODE:forward-auth}
+    admin-group: ${ADMIN_GROUP:homelab_admins}
+    # editor-group: notify_editors
+    logout-url: ${LOGOUT_URL:}
+    forward-auth:
+      # Addresses the headers are believed from; empty trusts any sender, which is only
+      # safe while the port is reachable from Traefik alone.
+      trusted-proxies: ${TRUSTED_PROXIES:}
+
+  # Which of a user's Authelia groups hold notifications. Every group by default.
+  groups:
+    pattern: ${GROUP_PATTERN:.*}
+    # exclude: [homelab_users]
+    # names:
+    #   notify_club: Radio Club
+
+  # `postgres` keeps notifications across restarts; `memory` holds them for the
+  # lifetime of the process, which is what the tests use.
+  notifications:
+    store: ${NOTIFICATION_STORE:postgres}
+    default-zone: ${DEFAULT_ZONE:America/New_York}
+
+  audit:
+    store: ${AUDIT_STORE:postgres}
+    retention: 365d
+
+  # The scheduler: due notifications are looked for every poll-interval. A run missed by
+  # more than misfire-grace, while the application was down, is skipped, not sent late.
+  dispatch:
+    enabled: true
+    poll-interval: 15s
+    misfire-grace: 1h
+    threads: 4
+
+  # The delivery plugins. Each plugin's settings go under settings.<plugin id>; see
+  # docs/plugins.md for what each takes. Secrets belong in the environment, e.g.
+  # NOTIFY_DELIVERY_SETTINGS_SMS_AUTH_TOKEN.
+  delivery:
+    max-attempts: 3
+    retry-backoff: 5s
+    log-plugin: true
+    mail:
+      from: ${MAIL_FROM:notify@localhost}
+      from-name: ${MAIL_FROM_NAME:}
+    settings:
+      sms:
+        account-sid: ${TWILIO_ACCOUNT_SID:}
+        auth-token: ${TWILIO_AUTH_TOKEN:}
+        from: ${TWILIO_FROM:}
+        messaging-service-sid: ${TWILIO_MESSAGING_SERVICE_SID:}
+      groupsio:
+        # The member address posts go out as, if not notify.delivery.mail.from.
+        from: ${GROUPSIO_FROM:}
+
+  content:
+    date-format: "EEEE, MMMM d, yyyy"
+    time-format: "h:mm a z"
+    locale: en-US
+
+  console:
+    title: ${CONSOLE_TITLE:Group Notify}
+    refresh-interval: 30s
+
+logging:
+  level:
+    # Each plugin logs under notify.plugin.<id>.
+    notify: INFO
+
+management:
+  endpoints:
+    web:
+      base-path: /mgmt
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      # Each feature's indicator, with its details. Health is open for container checks;
+      # the rest of /mgmt needs an admin.
+      show-details: always
+  health:
+    # The SMTP check connects on every health call; the plugins report readiness instead.
+    mail:
+      enabled: false
+    # Spring Boot's database check connects even when every store is in memory; the
+    # `database` indicator (DatabaseHealthIndicator) checks only when a store uses it.
+    db:
+      enabled: false
+  info:
+    build.enabled: true
+    env.enabled: true
+    java.enabled: true
+    os.enabled: true

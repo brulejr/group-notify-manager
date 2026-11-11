@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{ui/layout :: page(title='Groups', active='groups', content=~{::main})}">
+<body>
+<main class="console-content">
+  <div class="page-header">
+    <div>
+      <h1>Groups</h1>
+      <p class="lead-text">Notification groups come from Authelia, which takes them from LLDAP: join or leave one there.
+        A group's notifications are seen only by its members<th:block th:if="${me.admin}"> and admins; as an admin you also see groups you are not in</th:block>.</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead><tr><th>Group</th><th>Name</th><th>Active</th><th>Paused</th><th>All</th><th>Next run</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="g : ${groups}">
+          <td><a class="fw-semibold text-decoration-none" th:href="@{/ui/notifications(group=${g.name})}" th:text="${g.displayName}">Club</a>
+            <span class="badge text-bg-light border ms-1" th:unless="${g.member}" title="You are not a member; you see it as an admin">not a member</span></td>
+          <td class="mono small" th:text="${g.name}">notify_club</td>
+          <td th:text="${g.active}">0</td>
+          <td th:text="${g.paused}">0</td>
+          <td th:text="${g.total}">0</td>
+          <td class="small"><time th:if="${g.nextRunAt != null}" data-format="relative" th:datetime="${g.nextRunAt}"></time>
+            <span th:if="${g.nextRunAt == null}" class="text-body-secondary">—</span></td>
+          <td class="table-actions">
+            <a th:if="${g.canEdit}" class="btn btn-sm btn-outline-primary" th:href="@{/ui/notifications/new(group=${g.name})}">
+              <i class="bi bi-plus-lg me-1"></i>New</a>
+            <a class="btn btn-sm btn-outline-secondary" th:href="@{/ui/history(group=${g.name})}" title="History"><i class="bi bi-clock-history"></i></a>
+          </td>
+        </tr>
+        <tr th:if="${groups.isEmpty()}"><td colspan="7">
+          <div th:replace="~{ui/layout :: empty('bi-people', 'You are in no notification group', 'Ask an administrator to add you to one in LLDAP.')}"></div>
+        </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+</body>
+</html>

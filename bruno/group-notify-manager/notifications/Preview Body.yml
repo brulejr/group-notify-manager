@@ -1,0 +1,25 @@
+info:
+  name: Preview Body
+  type: http
+  seq: 10
+
+http:
+  method: POST
+  url: "{{notify_url}}/api/content/preview"
+  headers:
+    - name: Remote-User
+      value: "{{remote_user}}"
+    - name: Remote-Groups
+      value: "{{remote_groups}}"
+  body:
+    type: json
+    data: |-
+      {"body": "<p>Hello <strong>club</strong></p>", "format": "HTML"}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

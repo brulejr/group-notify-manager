@@ -1,0 +1,34 @@
+[versions]
+# Kotlin is kept in step with the version Spring Boot manages.
+kotlin = "2.3.21"
+spring-boot = "4.1.1"
+spring-dependency-management = "1.1.7"
+# Markdown to HTML for delivery, and HTML sanitising and flattening.
+commonmark = "0.27.0"
+jsoup = "1.21.2"
+# The console's browser libraries, served from the jar so it works without internet.
+bootstrap = "5.3.8"
+bootstrap-icons = "1.13.2"
+htmx = "2.0.11"
+# The two body editors: EasyMDE for Markdown, Quill for WYSIWYG HTML.
+easymde = "2.20.0"
+quill = "2.0.3"
+
+[libraries]
+commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
+commonmark-ext-gfm-tables = { module = "org.commonmark:commonmark-ext-gfm-tables", version.ref = "commonmark" }
+commonmark-ext-gfm-strikethrough = { module = "org.commonmark:commonmark-ext-gfm-strikethrough", version.ref = "commonmark" }
+commonmark-ext-autolink = { module = "org.commonmark:commonmark-ext-autolink", version.ref = "commonmark" }
+jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
+
+webjars-bootstrap = { module = "org.webjars:bootstrap", version.ref = "bootstrap" }
+webjars-bootstrap-icons = { module = "org.webjars.npm:bootstrap-icons", version.ref = "bootstrap-icons" }
+webjars-htmx = { module = "org.webjars.npm:htmx.org", version.ref = "htmx" }
+webjars-easymde = { module = "org.webjars.npm:easymde", version.ref = "easymde" }
+webjars-quill = { module = "org.webjars.npm:quill", version.ref = "quill" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }

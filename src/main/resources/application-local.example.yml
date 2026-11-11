@@ -1,0 +1,30 @@
+# Copy to application-local.yml (gitignored, and left out of the boot jar) for
+# development. The local profile is the default.
+
+# Reads POSTGRES_* and the rest straight from .env, so `./gradlew bootRun` works without
+# exporting them first.
+spring.config.import: optional:file:.env[.properties]
+
+notify:
+  security:
+    # Requests without Authelia's headers are signed in as this user, so the console
+    # works on http://localhost:5002 without Traefik. Never set this in production.
+    dev-user:
+      username: devuser
+      name: Dev User
+      email: dev@example.org
+      groups: [homelab_admins, notify_club, notify_family]
+  groups:
+    pattern: "notify_.*"
+    names:
+      notify_club: Radio Club
+      notify_family: Family
+
+# docker/dev runs Mailpit: SMTP on 1025, its inbox on http://localhost:8025.
+spring:
+  mail:
+    host: localhost
+    port: 1025
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false

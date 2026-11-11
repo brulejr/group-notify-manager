@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{ui/layout :: page(title=${existing == null} ? 'New notification' : 'Edit ' + ${existing.title}, active=${existing == null} ? 'new' : 'notifications', content=~{::main})}">
+<body>
+<main class="console-content">
+  <div class="page-header">
+    <div>
+      <div class="small mb-1">
+        <a th:if="${existing != null}" th:href="@{/ui/notifications/{id}(id=${existing.id})}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Back to it</a>
+        <a th:if="${existing == null}" th:href="@{/ui/notifications}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Notifications</a>
+      </div>
+      <h1 th:text="${existing == null} ? 'New notification' : 'Edit ' + ${existing.title}">New notification</h1>
+      <p class="lead-text">What to say, when to send it, and where. Write the body in Markdown or the rich-text editor; each delivery gets it in the form it suits.</p>
+    </div>
+  </div>
+
+  <!--/* The whole form is redrawn when it is refused, with each problem against its input. */-->
+  <form th:fragment="form" id="notification-form" class="notification-form" novalidate hx-target="this" hx-swap="outerHTML" hx-disinherit="*"
+        th:hx-post="${existing == null} ? @{/ui/notifications} : @{/ui/notifications/{id}(id=${existing.id})}"
+        th:attr="data-next-index=${rows.size()}">
+    <div th:replace="~{ui/layout :: toast(${toast})}"></div>
+    <div class="row g-4">
+      <div class="col-xl-8">
+
+        <!--/* ---- message ---- */-->
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-envelope-paper"></i>Message</div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-5">
+                <label class="form-label fw-semibold" for="group">Group</label>
+                <select class="form-select" id="group" name="group" th:classappend="${errors.containsKey('group')} ? 'is-invalid'">
+                  <option value="" th:selected="${#strings.isEmpty(form.group)}">Choose a group…</option>
+                  <option th:each="g : ${editableGroups}" th:value="${g}" th:text="${groupNames.get(g) ?: g}" th:selected="${g == form.group}">group</option>
+                </select>
+                <div class="invalid-feedback" th:text="${errors.get('group')}"></div>
+                <div class="form-text">Only its members, and admins, see it.</div>
+              </div>
+              <div class="col-md-7">
+                <label class="form-label fw-semibold" for="title">Title</label>
+                <input class="form-control" id="title" name="title" th:value="${form.title}" placeholder="e.g. Monthly meeting reminder"
+                       th:classappend="${errors.containsKey('title')} ? 'is-invalid'" maxlength="200">
+                <div class="invalid-feedback" th:text="${errors.get('title')}"></div>
+                <div class="form-text">What the console calls it. Recipients see the subject.</div>
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold" for="subject">Subject</label>
+                <input class="form-control" id="subject" name="subject" th:value="${form.subject}" placeholder="e.g. Club meeting tonight at 7"
+                       th:classappend="${errors.containsKey('subject')} ? 'is-invalid'" maxlength="300">
+                <div class="invalid-feedback" th:text="${errors.get('subject')}"></div>
+              </div>
+              <div class="col-12">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                  <label class="form-label fw-semibold mb-0 me-auto" for="body">Body</label>
+                  <div class="btn-group btn-group-sm" role="group" aria-label="Editor">
+                    <th:block th:each="f : ${formats}">
+                      <input type="radio" class="btn-check" name="format" th:id="'format-' + ${f}" th:value="${f}" th:checked="${f == form.format}"
+                             data-format-switch autocomplete="off">
+                      <label class="btn btn-outline-secondary" th:for="'format-' + ${f}">
+                        <i class="bi me-1" th:classappend="${f.name() == 'MARKDOWN'} ? 'bi-markdown' : 'bi-type'"></i><span th:text="${f.label}">Markdown</span></label>
+                    </th:block>
+                  </div>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" th:hx-post="@{/ui/content/preview}" hx-include="#body, [name=format]:checked"
+                          hx-target="#preview" hx-swap="innerHTML" data-preview-button><i class="bi bi-eye me-1"></i>Preview</button>
+                </div>
+                <div class="editor-shell" th:classappend="${errors.containsKey('body')} ? 'is-invalid'">
+                  <textarea class="form-control mono" id="body" name="body" rows="14" data-editor
+                            th:attr="data-format=${form.format},data-convert-url=@{/ui/content/convert}" th:text="${form.body}"></textarea>
+                </div>
+                <div class="invalid-feedback d-block" th:if="${errors.containsKey('body')}" th:text="${errors.get('body')}"></div>
+                <div id="preview" class="mt-3"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!--/* ---- schedule ---- */-->
+        <div class="card mb-4 schedule-card">
+          <div class="card-header"><i class="bi bi-calendar-event"></i>Schedule</div>
+          <div class="card-body" id="schedule-inputs">
+            <div class="btn-group mb-3" role="group" aria-label="Schedule kind">
+              <th:block th:each="k : ${kinds}">
+                <input type="radio" class="btn-check" name="kind" th:id="'kind-' + ${k}" th:value="${k}" th:checked="${k == form.kind}" autocomplete="off">
+                <label class="btn btn-outline-primary" th:for="'kind-' + ${k}">
+                  <i class="bi me-1" th:classappend="${k.name() == 'ONCE'} ? 'bi-1-circle' : 'bi-arrow-repeat'"></i><span th:text="${k.label}">One-off</span></label>
+              </th:block>
+            </div>
+            <div class="row g-3">
+              <div class="col-md-6 schedule-once">
+                <label class="form-label fw-semibold" for="runAt">Send at</label>
+                <input class="form-control" type="datetime-local" id="runAt" name="runAt" th:value="${form.runAt}"
+                       th:classappend="${errors.containsKey('runAt')} ? 'is-invalid'">
+                <div class="invalid-feedback" th:text="${errors.get('runAt')}"></div>
+              </div>
+              <div class="col-md-6 schedule-recurring">
+                <label class="form-label fw-semibold" for="cron">Cron expression</label>
+                <input class="form-control mono" id="cron" name="cron" th:value="${form.cron}" list="cron-examples" placeholder="minute hour day month weekday"
+                       autocomplete="off" th:classappend="${errors.containsKey('cron')} ? 'is-invalid'">
+                <datalist id="cron-examples"><option th:each="e : ${cronExamples}" th:value="${e.key}" th:text="${e.value}"></option></datalist>
+                <div class="invalid-feedback" th:text="${errors.get('cron')}"></div>
+                <div class="form-text">Five fields, e.g. <code>0 18 * * TUE</code> for Tuesdays at 18:00; <code>TUE#2</code> is the second Tuesday, <code>L</code> the last day.</div>
+              </div>
+              <div class="col-md-3 schedule-recurring">
+                <label class="form-label fw-semibold" for="until">Until</label>
+                <input class="form-control" type="date" id="until" name="until" th:value="${form.until}"
+                       th:classappend="${errors.containsKey('until')} ? 'is-invalid'">
+                <div class="invalid-feedback" th:text="${errors.get('until')}"></div>
+                <div class="form-text">Optional last day.</div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-semibold" for="zone">Time zone</label>
+                <input class="form-control" id="zone" name="zone" th:value="${form.zone}" list="zones" autocomplete="off"
+                       th:classappend="${errors.containsKey('zone')} ? 'is-invalid'">
+                <datalist id="zones"><option th:each="z : ${zones}" th:value="${z}"></option></datalist>
+                <div class="invalid-feedback" th:text="${errors.get('zone')}"></div>
+              </div>
+            </div>
+            <div id="schedule-preview" class="mt-3" th:hx-get="@{/ui/notifications/schedule-preview}"
+                 hx-trigger="load, change from:#schedule-inputs, keyup changed delay:400ms from:#cron"
+                 hx-include="#schedule-inputs" hx-target="this" hx-swap="innerHTML"></div>
+          </div>
+        </div>
+
+        <!--/* ---- deliveries ---- */-->
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-send"></i>Deliveries
+            <div class="dropdown ms-auto">
+              <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-plus-lg me-1"></i>Add delivery</button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li th:each="p : ${plugins}">
+                  <button type="button" class="dropdown-item d-flex align-items-center gap-2" th:hx-get="@{/ui/notifications/delivery}"
+                          th:attr="hx-vals='js:{plugin: &quot;' + ${p.id} + '&quot;, index: notifyNextIndex()}'"
+                          hx-target="#delivery-list" hx-swap="beforeend">
+                    <i class="bi" th:classappend="'bi-' + ${p.icon}"></i><span th:text="${p.name}">Discord</span>
+                    <span class="badge text-bg-warning ms-auto" th:unless="${p.ready}" th:title="${p.reason}">not ready</span></button>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-danger py-2 small" th:each="e : ${deliveryErrors}" th:text="${e.substring(0, 1).toUpperCase() + e.substring(1)}">add one</div>
+            <div id="delivery-list" class="delivery-list">
+              <th:block th:each="row : ${rows}"><div th:replace="~{ui/notifications/parts :: delivery}"></div></th:block>
+            </div>
+            <p class="text-body-secondary small mb-0 delivery-empty">One notification can go out several ways at once: a Discord channel, a groups.io list and a few phones, say.</p>
+          </div>
+        </div>
+      </div>
+
+      <!--/* ---- side ---- */-->
+      <div class="col-xl-4">
+        <div class="form-side">
+          <div class="card mb-4">
+            <div class="card-body">
+              <div class="form-check form-switch mb-3" th:if="${existing == null}">
+                <input type="hidden" name="paused" value="false">
+                <input class="form-check-input" type="checkbox" role="switch" id="paused" name="paused" value="true" th:checked="${form.paused}">
+                <label class="form-check-label" for="paused">Start paused</label>
+              </div>
+              <div class="small text-body-secondary mb-3" th:if="${existing != null}">
+                Status: <span th:replace="~{ui/layout :: status(${existing.status})}"></span>.
+                <th:block th:if="${existing.status.name() == 'PAUSED'}">It stays paused when saved.</th:block>
+              </div>
+              <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary">
+                  <span class="htmx-indicator spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                  <i class="bi bi-check-lg me-1"></i><span th:text="${existing == null} ? 'Create notification' : 'Save changes'">Save</span></button>
+                <a class="btn btn-outline-secondary" th:href="${existing == null} ? @{/ui/notifications} : @{/ui/notifications/{id}(id=${existing.id})}">Cancel</a>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><i class="bi bi-braces"></i>Placeholders</div>
+            <div class="card-body small">
+              <p class="text-body-secondary">Filled in when it is sent, in the subject or the body:</p>
+              <dl class="props placeholders">
+                <th:block th:each="p : ${placeholders}">
+                  <dt><code th:text="'{{' + ${p.key} + '}}'">{{date}}</code></dt><dd th:text="${p.value}">the date</dd>
+                </th:block>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</main>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{ui/layout :: page(title='History', active='history', content=~{::main})}">
+<body>
+<main class="console-content">
+  <div class="page-header">
+    <div>
+      <h1>History</h1>
+      <p class="lead-text">Every change to your groups' notifications and every delivery made of them, newest first.
+        Kept after a notification is deleted.</p>
+    </div>
+  </div>
+
+  <div class="alert alert-info d-flex align-items-center gap-2" th:if="${filteredNotification != null}">
+    <i class="bi bi-funnel"></i>
+    <span>Showing <a th:href="@{/ui/notifications/{id}(id=${filteredNotification.id})}" th:text="${filteredNotification.title}">x</a> only.</span>
+    <a th:href="@{/ui/history}" class="ms-auto">Show everything</a>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <form id="history-filter" class="filter-bar w-100" th:hx-get="@{/ui/history/rows}" hx-target="#history-rows"
+            hx-swap="outerHTML" hx-trigger="change from:select, submit">
+        <input type="hidden" name="notificationId" th:value="${notificationId}">
+        <select class="form-select w-auto" name="group" aria-label="Group">
+          <option value="">All groups</option>
+          <option th:each="g : ${groups}" th:value="${g}" th:text="${groupNames.get(g) ?: g}" th:selected="${g == group}">group</option>
+        </select>
+        <select class="form-select w-auto" name="type" aria-label="Kind">
+          <option value="">Everything</option>
+          <option th:each="c : ${categories}" th:value="${c}" th:text="${#strings.capitalize(c)}" th:selected="${c == type}">deliveries</option>
+          <optgroup label="One kind">
+            <option th:each="t : ${types}" th:value="${t}" th:text="${t.label}" th:selected="${t.name() == type}">Sent</option>
+          </optgroup>
+        </select>
+      </form>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead><tr><th>When</th><th>What</th><th>Notification</th><th>Group</th><th>Delivery</th><th>Detail</th><th>By</th></tr></thead>
+        <tbody id="history-rows" th:fragment="rows" hx-target="this" hx-swap="outerHTML" hx-disinherit="*">
+        <tr th:each="e : ${events}">
+          <td class="text-nowrap small"><time data-format="datetime" th:datetime="${e.occurredAt}"></time></td>
+          <td><span th:replace="~{ui/layout :: event(${e.type})}"></span></td>
+          <td>
+            <a th:if="${e.notificationId != null and e.type.name() != 'DELETED'}" class="text-decoration-none fw-medium"
+               th:href="@{/ui/notifications/{id}(id=${e.notificationId})}" th:text="${e.notificationTitle}">title</a>
+            <span th:unless="${e.notificationId != null and e.type.name() != 'DELETED'}" th:text="${e.notificationTitle}">title</span>
+          </td>
+          <td class="small" th:text="${groupNames.get(e.group) ?: e.group}">group</td>
+          <td class="small">
+            <th:block th:if="${e.plugin != null}"><span class="badge badge-soft bg-body-tertiary text-body-secondary border-secondary-subtle" th:text="${e.plugin}">discord</span>
+              <span th:text="${e.target}">target</span></th:block>
+          </td>
+          <td class="small detail-cell">
+            <span th:text="${e.detail}">detail</span>
+            <span th:if="${e.attempts != null and e.attempts > 1}" class="text-body-secondary" th:text="'(' + ${e.attempts} + ' attempts)'"></span>
+            <span th:if="${e.reference != null}" class="text-body-secondary mono d-block text-truncate" th:text="${e.reference}" th:title="${e.reference}"></span>
+          </td>
+          <td class="small text-nowrap">
+            <i class="bi bi-hand-index me-1 text-body-secondary" th:if="${e.trigger != null and e.trigger.name() == 'MANUAL'}" title="Sent by hand"></i>
+            <span th:text="${e.actor}">actor</span></td>
+        </tr>
+        <tr th:if="${events.isEmpty() and firstPage}"><td colspan="7">
+          <div th:replace="~{ui/layout :: empty('bi-clock', 'Nothing recorded', 'Changes and deliveries show here once they happen.')}"></div>
+        </td></tr>
+        <tr th:if="${more}">
+          <td colspan="7" class="text-center">
+            <button type="button" class="btn btn-sm btn-outline-secondary" th:hx-get="@{/ui/history/rows}"
+                    th:attr="hx-vals='{&quot;before&quot;: ' + ${lastId} + '}'" hx-include="#history-filter"
+                    hx-target="closest tr" hx-swap="outerHTML" hx-select="tbody > tr">Load older</button>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+</body>
+</html>

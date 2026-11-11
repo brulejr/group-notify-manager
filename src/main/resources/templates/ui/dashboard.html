@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{ui/layout :: page(title='Dashboard', active='dashboard', content=~{::main})}">
+<body>
+<main class="console-content">
+  <div class="page-header">
+    <div>
+      <h1 th:text="'Hello, ' + ${me.displayName}">Hello</h1>
+      <p class="lead-text">What your groups have coming up, what went out lately, and whether every way of sending is ready.</p>
+    </div>
+    <div class="actions" th:if="${me.editor}">
+      <a th:href="@{/ui/notifications/new}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New notification</a>
+    </div>
+  </div>
+
+  <div th:fragment="overview" id="overview" th:hx-get="@{/ui/overview}" th:hx-trigger="'every ' + ${refreshSeconds} + 's, notificationsChanged from:body'"
+       hx-swap="outerHTML" hx-target="this" hx-disinherit="*" th:with="o=${overview}">
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-xl-3"><div class="card kpi">
+        <div class="kpi-label"><span class="kpi-icon"><i class="bi bi-bell"></i></span>Active</div>
+        <div class="kpi-value" th:text="${o.active}">0</div>
+        <div class="kpi-sub" th:text="${o.completed} + ' completed'">0 completed</div></div></div>
+      <div class="col-6 col-xl-3"><div class="card kpi">
+        <div class="kpi-label"><span class="kpi-icon warn"><i class="bi bi-pause"></i></span>Paused</div>
+        <div class="kpi-value" th:text="${o.paused}">0</div>
+        <div class="kpi-sub">held until resumed</div></div></div>
+      <div class="col-6 col-xl-3"><div class="card kpi">
+        <div class="kpi-label"><span class="kpi-icon ok"><i class="bi bi-send-check"></i></span>Sent, past day</div>
+        <div class="kpi-value" th:text="${o.sentLastDay}">0</div>
+        <div class="kpi-sub">deliveries accepted</div></div></div>
+      <div class="col-6 col-xl-3"><div class="card kpi">
+        <div class="kpi-label"><span class="kpi-icon bad"><i class="bi bi-exclamation-octagon"></i></span>Failed, past day</div>
+        <div class="kpi-value" th:classappend="${o.failedLastDay > 0} ? 'text-danger'" th:text="${o.failedLastDay}">0</div>
+        <div class="kpi-sub"><a th:href="@{/ui/history(type='failures')}" class="text-reset">see failures</a></div></div></div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-xl-7">
+        <div class="card h-100">
+          <div class="card-header"><i class="bi bi-calendar-event"></i>Coming up
+            <a th:href="@{/ui/notifications}" class="ms-auto small fw-normal">All notifications</a></div>
+          <div class="list-group list-group-flush">
+            <a class="list-group-item list-group-item-action upcoming-item" th:each="n : ${o.upcoming}"
+               th:href="@{/ui/notifications/{id}(id=${n.id})}">
+              <div class="upcoming-when">
+                <div class="fw-semibold" th:text="${#temporals.format(n.nextRunAt.atZone(n.schedule.zone), 'EEE d MMM')}">Tue 17 Nov</div>
+                <div class="small text-body-secondary" th:text="${#temporals.format(n.nextRunAt.atZone(n.schedule.zone), 'h:mm a z')}">6:00 PM</div>
+              </div>
+              <div class="flex-grow-1 min-w-0">
+                <div class="fw-semibold text-truncate" th:text="${n.title}">Title</div>
+                <div class="small text-body-secondary text-truncate" th:text="${n.subject}">Subject</div>
+              </div>
+              <span th:replace="~{ui/layout :: group(${n.group}, ${groupNames.get(n.group) ?: n.group})}"></span>
+              <span class="badge text-bg-light border" th:text="${n.schedule.kind.label}">Recurring</span>
+            </a>
+            <th:block th:if="${o.upcoming.isEmpty()}">
+              <div th:replace="~{ui/layout :: empty('bi-calendar', 'Nothing scheduled', 'Notifications that are active and due appear here.')}"></div>
+            </th:block>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl-5">
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-plug"></i>Delivery plugins
+            <a th:href="@{/ui/plugins}" class="ms-auto small fw-normal">Details</a></div>
+          <ul class="list-group list-group-flush plugin-list">
+            <li class="list-group-item" th:each="p : ${o.plugins}">
+              <i class="bi plugin-icon" th:classappend="'bi-' + ${p.icon}"></i>
+              <span class="fw-medium" th:text="${p.name}">Discord</span>
+              <span class="ms-auto small d-flex align-items-center gap-2" th:title="${p.reason}">
+                <span class="status-dot" th:classappend="${p.ready} ? 'up' : 'warn'"></span>
+                <span th:text="${p.ready} ? 'Ready' : 'Not configured'">Ready</span></span>
+            </li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-header"><i class="bi bi-clock-history"></i>Recent activity
+            <a th:href="@{/ui/history}" class="ms-auto small fw-normal">History</a></div>
+          <ul class="list-group list-group-flush activity">
+            <li class="list-group-item" th:each="e : ${o.recent}">
+              <span th:replace="~{ui/layout :: event(${e.type})}"></span>
+              <span class="min-w-0 flex-grow-1">
+                <a th:if="${e.notificationId != null and e.type.name() != 'DELETED'}" th:href="@{/ui/notifications/{id}(id=${e.notificationId})}"
+                   class="fw-medium text-decoration-none" th:text="${e.notificationTitle}">Title</a>
+                <span th:unless="${e.notificationId != null and e.type.name() != 'DELETED'}" class="fw-medium" th:text="${e.notificationTitle}">Title</span>
+                <span class="small text-body-secondary d-block text-truncate" th:text="${e.target ?: e.actor}">target</span>
+              </span>
+              <time class="small text-body-secondary text-nowrap" data-format="relative" th:datetime="${e.occurredAt}"></time>
+            </li>
+            <li class="list-group-item" th:if="${o.recent.isEmpty()}">
+              <div th:replace="~{ui/layout :: empty('bi-clock', 'No activity yet', 'Changes and deliveries are recorded here.')}"></div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

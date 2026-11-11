@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{ui/layout :: page(title='Delivery plugins', active='plugins', content=~{::main})}">
+<body>
+<main class="console-content">
+  <div class="page-header">
+    <div>
+      <h1>Delivery plugins</h1>
+      <p class="lead-text">The ways a notification can be sent. Each is a plugin: a jar found at startup, so new ones, a packet
+        radio gateway say, can be added without changing the application. Installation settings come from the configuration;
+        what a delivery asks for is filled in on each notification.</p>
+    </div>
+  </div>
+  <div class="row g-4">
+    <div class="col-lg-6 col-xxl-4" th:each="p : ${plugins}">
+      <div class="card h-100 plugin-card">
+        <div class="card-header">
+          <i class="bi plugin-icon" th:classappend="'bi-' + ${p.icon}"></i>
+          <span th:text="${p.name}">Discord</span>
+          <span class="mono small text-body-secondary fw-normal" th:text="${p.id}">discord</span>
+          <span class="ms-auto badge" th:classappend="${p.ready} ? 'text-bg-success' : 'text-bg-warning'" th:text="${p.ready} ? 'Ready' : 'Not ready'">Ready</span>
+        </div>
+        <div class="card-body">
+          <p th:text="${p.description}">description</p>
+          <div class="alert alert-warning small py-2" th:unless="${p.ready}"><i class="bi bi-exclamation-triangle me-1"></i><span th:text="${p.reason}">reason</span></div>
+          <div class="fw-semibold small mb-1">Each delivery asks for</div>
+          <ul class="small field-list">
+            <li th:each="f : ${p.fields}">
+              <span class="fw-medium" th:text="${f.label}">label</span>
+              <span class="text-danger" th:if="${f.required}">*</span>
+              <i class="bi bi-lock text-body-secondary" th:if="${f.secret}" title="secret"></i>
+              <span class="text-body-secondary" th:if="${!#strings.isEmpty(f.help)}" th:text="'— ' + ${f.help}">help</span>
+            </li>
+          </ul>
+          <th:block th:if="${isAdmin}">
+            <div class="fw-semibold small mb-1 mt-3">Installation</div>
+            <dl class="props small mb-0">
+              <dt>From</dt><dd class="mono" th:text="${p.source}">jar</dd>
+              <dt>Settings set</dt>
+              <dd><span th:if="${p.configuredSettings.isEmpty()}" class="text-body-secondary">none</span>
+                <code th:each="s : ${p.configuredSettings}" class="me-2" th:text="${s}">key</code></dd>
+            </dl>
+          </th:block>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

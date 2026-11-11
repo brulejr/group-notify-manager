@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{ui/layout :: page(title='Notifications', active='notifications', content=~{::main})}">
+<body>
+<main class="console-content">
+  <div class="page-header">
+    <div>
+      <h1>Notifications <span class="badge text-bg-secondary align-middle fs-6" th:text="${total}">0</span></h1>
+      <p class="lead-text">Every notification of the groups you belong to<th:block th:if="${me.admin}">, and as an admin every other group's</th:block>.
+        Each is sent once or on a schedule, through one or more deliveries.</p>
+    </div>
+    <div class="actions" th:if="${canCreate}">
+      <a th:href="@{/ui/notifications/new}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New notification</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <form id="notification-filter" class="filter-bar w-100" th:hx-get="@{/ui/notifications/rows}" hx-target="#notification-rows"
+            hx-swap="outerHTML" hx-trigger="input changed delay:250ms from:#notification-q, change from:select, submit">
+        <div class="search-input flex-grow-1"><i class="bi bi-search"></i>
+          <input class="form-control" id="notification-q" type="search" name="q" th:value="${q}" placeholder="Search title or subject"></div>
+        <select class="form-select w-auto" name="group" aria-label="Group">
+          <option value="">All groups</option>
+          <option th:each="g : ${groups}" th:value="${g}" th:text="${groupNames.get(g) ?: g}" th:selected="${g == group}">group</option>
+        </select>
+        <select class="form-select w-auto" name="status" aria-label="Status">
+          <option value="">Any status</option>
+          <option th:each="s : ${statuses}" th:value="${s}" th:text="${s.label}" th:selected="${s == status}">Active</option>
+        </select>
+      </form>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead><tr><th>Notification</th><th>Group</th><th>Schedule</th><th>Next run</th><th>Deliveries</th><th>Status</th><th></th></tr></thead>
+        <tbody id="notification-rows" th:fragment="rows" th:hx-get="@{/ui/notifications/rows}" hx-trigger="notificationsChanged from:body"
+               hx-include="#notification-filter" hx-target="this" hx-swap="outerHTML" hx-disinherit="*">
+        <tr th:each="row : ${rows}" th:with="n=${row.notification}">
+          <td class="min-w-0">
+            <a class="fw-semibold text-decoration-none" th:href="@{/ui/notifications/{id}(id=${n.id})}" th:text="${n.title}">title</a>
+            <div class="small text-body-secondary text-truncate subject-line" th:text="${n.subject}">subject</div>
+          </td>
+          <td><span th:replace="~{ui/layout :: group(${n.group}, ${row.groupName})}"></span></td>
+          <td class="small">
+            <th:block th:if="${n.schedule.kind.name() == 'ONCE'}"><i class="bi bi-1-circle me-1 text-body-secondary"></i>One-off</th:block>
+            <th:block th:unless="${n.schedule.kind.name() == 'ONCE'}"><i class="bi bi-arrow-repeat me-1 text-body-secondary"></i><span class="mono" th:text="${n.schedule.cron}">cron</span></th:block>
+          </td>
+          <td class="small text-nowrap">
+            <th:block th:if="${n.nextRunAt != null}">
+              <span th:text="${#temporals.format(n.nextRunAt.atZone(n.schedule.zone), 'EEE d MMM, h:mm a z')}">Tue</span>
+              <div><time class="text-body-secondary" data-format="relative" th:datetime="${n.nextRunAt}"></time></div>
+            </th:block>
+            <span th:if="${n.nextRunAt == null}" class="text-body-secondary">—</span>
+          </td>
+          <td>
+            <span class="delivery-chip" th:each="d : ${row.deliveries}" th:classappend="${!d.enabled} ? 'disabled' : (${!d.ready} ? 'not-ready' : '')"
+                  th:title="${d.pluginName} + ': ' + ${d.summary} + (${!d.enabled} ? ' (disabled)' : '') + (${!d.ready} ? ' (not ready: ' + ${d.reason} + ')' : '')">
+              <i class="bi" th:classappend="'bi-' + ${d.icon}"></i></span>
+          </td>
+          <td><span th:replace="~{ui/layout :: status(${n.status})}"></span></td>
+          <td class="table-actions">
+            <th:block th:if="${row.canEdit}">
+              <button type="button" class="btn btn-sm btn-outline-secondary" title="Pause" hx-swap="none"
+                      th:if="${n.status.name() == 'ACTIVE'}" th:hx-post="@{/ui/notifications/{id}/pause(id=${n.id})}"><i class="bi bi-pause-fill"></i></button>
+              <button type="button" class="btn btn-sm btn-outline-success" title="Resume" hx-swap="none"
+                      th:if="${n.status.name() == 'PAUSED'}" th:hx-post="@{/ui/notifications/{id}/resume(id=${n.id})}"><i class="bi bi-play-fill"></i></button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" title="Send now" hx-swap="none" data-confirm-label="Send now"
+                      th:hx-post="@{/ui/notifications/{id}/send(id=${n.id})}"
+                      th:hx-confirm="'Send ' + ${n.title} + ' now, through every enabled delivery? Its schedule is not changed.'"><i class="bi bi-send"></i></button>
+              <a class="btn btn-sm btn-outline-secondary" title="Edit" th:href="@{/ui/notifications/{id}/edit(id=${n.id})}"><i class="bi bi-pencil"></i></a>
+              <button type="button" class="btn btn-sm btn-outline-danger" title="Delete" hx-swap="none" data-confirm-label="Delete"
+                      th:hx-delete="@{/ui/notifications/{id}(id=${n.id})}"
+                      th:hx-confirm="'Delete ' + ${n.title} + '? Its history is kept.'"><i class="bi bi-trash"></i></button>
+            </th:block>
+          </td>
+        </tr>
+        <tr th:if="${rows.isEmpty()}"><td colspan="7">
+          <div th:replace="~{ui/layout :: empty('bi-bell-slash', 'No notifications match', 'Create one, or change the filter.')}"></div>
+        </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+</body>
+</html>

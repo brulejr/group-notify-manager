@@ -1,0 +1,71 @@
+# Production: the application and its database on one Docker host, behind Traefik and
+# Authelia. The host is managed by Ansible, which checks out this repository, builds the
+# jar and runs this file; see docker/prod/README.md for what it must provide.
+#
+#   ./gradlew bootJar
+#   docker compose -f docker/prod/compose.prod.yaml --env-file <env file> up -d --build
+#
+# The application has no login of its own: it trusts the Remote-* headers Traefik copies
+# from Authelia. It is published on loopback only (APP_BIND_IP) and reached by Traefik
+# over the Docker network, so its port cannot skip Authelia.
+name: group-notify-manager
+
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile
+    image: group-notify-manager:${APP_VERSION:-latest}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PROFILE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:?set POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_APP_USERNAME:?set POSTGRES_APP_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_APP_PASSWORD:?set POSTGRES_APP_PASSWORD}
+      ADMIN_GROUP: ${ADMIN_GROUP:-homelab_admins}
+      GROUP_PATTERN: ${GROUP_PATTERN:-.*}
+      LOGOUT_URL: ${LOGOUT_URL:-}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+      DEFAULT_ZONE: ${DEFAULT_ZONE:-America/New_York}
+      CONSOLE_TITLE: ${CONSOLE_TITLE:-Group Notify}
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-}
+      GROUPSIO_FROM: ${GROUPSIO_FROM:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM: ${TWILIO_FROM:-}
+      TWILIO_MESSAGING_SERVICE_SID: ${TWILIO_MESSAGING_SERVICE_SID:-}
+    ports:
+      - "${APP_BIND_IP:-127.0.0.1}:${APP_PORT:-5002}:5002"
+    volumes:
+      - ${PLUGINS_DIR:-../../plugins-dir}:/app/plugins:ro,z
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?set POSTGRES_ADMIN_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
+      POSTGRES_APP_USERNAME: ${POSTGRES_APP_USERNAME:?set POSTGRES_APP_USERNAME}
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:?set POSTGRES_APP_PASSWORD}
+    ports:
+      # Loopback only: the application reaches it over the compose network.
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../postgres/initdb:/docker-entrypoint-initdb.d:ro,z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

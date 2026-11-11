@@ -1,0 +1,14 @@
+name: LOCAL
+variables:
+  - name: notify_url
+    value: http://localhost:5002
+    description: ""
+  - name: remote_user
+    value: devuser
+    description: "Sent as Remote-User, as Authelia's forward-auth would"
+  - name: remote_groups
+    value: homelab_admins,notify_club
+    description: "Sent as Remote-Groups"
+  - name: notification_id
+    value: ""
+    description: "Copy the id Create Notification returns here"

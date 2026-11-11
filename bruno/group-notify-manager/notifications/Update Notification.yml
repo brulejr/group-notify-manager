@@ -1,0 +1,36 @@
+info:
+  name: Update Notification
+  type: http
+  seq: 4
+
+http:
+  method: PUT
+  url: "{{notify_url}}/api/notifications/{{notification_id}}"
+  headers:
+    - name: Remote-User
+      value: "{{remote_user}}"
+    - name: Remote-Groups
+      value: "{{remote_groups}}"
+  body:
+    type: json
+    data: |-
+      {
+        "group": "notify_club",
+        "title": "Monthly meeting",
+        "subject": "Club meeting {{weekday}} at {{time}}",
+        "body": "The **monthly meeting** is tonight.\n\n- Repeater report\n- Field day planning",
+        "format": "MARKDOWN",
+        "schedule": {"kind": "RECURRING", "cron": "0 18 * * TUE#2", "zone": "America/New_York"},
+        "deliveries": [
+          {"plugin": "log", "target": {"body": "text"}},
+          {"plugin": "email", "label": "Members", "target": {"to": "members@example.org"}}
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

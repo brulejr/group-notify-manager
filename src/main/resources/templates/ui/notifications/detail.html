@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{ui/layout :: page(title=${n.title}, active='notifications', content=~{::main})}">
+<body>
+<main class="console-content">
+  <div th:replace="~{ui/layout :: toast(${toast})}"></div>
+  <div th:fragment="body" id="detail-body" th:hx-get="@{/ui/notifications/{id}/body(id=${n.id})}" hx-trigger="notificationsChanged from:body"
+       hx-target="this" hx-swap="outerHTML" hx-disinherit="*">
+    <div class="page-header">
+      <div class="min-w-0">
+        <div class="small mb-1"><a th:href="@{/ui/notifications}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Notifications</a></div>
+        <h1 class="d-flex flex-wrap align-items-center gap-2">
+          <span th:text="${n.title}">Title</span>
+          <span th:replace="~{ui/layout :: status(${n.status})}"></span>
+        </h1>
+        <p class="lead-text d-flex flex-wrap gap-2 align-items-center">
+          <span th:replace="~{ui/layout :: group(${n.group}, ${groupName})}"></span>
+          <span class="small">Created by <span th:text="${n.createdBy}">x</span> <time data-format="relative" th:datetime="${n.createdAt}"></time>,
+            last edited by <span th:text="${n.updatedBy}">x</span> <time data-format="relative" th:datetime="${n.updatedAt}"></time></span>
+        </p>
+      </div>
+      <div class="actions" th:if="${canEdit}">
+        <button type="button" class="btn btn-outline-secondary" hx-swap="none" data-confirm-label="Send now"
+                th:hx-post="@{/ui/notifications/{id}/send(id=${n.id})}"
+                th:hx-confirm="'Send ' + ${n.title} + ' now, through every enabled delivery? Its schedule is not changed.'">
+          <i class="bi bi-send me-1"></i>Send now</button>
+        <button type="button" class="btn btn-outline-warning" hx-swap="none" th:if="${n.status.name() == 'ACTIVE'}"
+                th:hx-post="@{/ui/notifications/{id}/pause(id=${n.id})}"><i class="bi bi-pause-fill me-1"></i>Pause</button>
+        <button type="button" class="btn btn-outline-success" hx-swap="none" th:if="${n.status.name() == 'PAUSED'}"
+                th:hx-post="@{/ui/notifications/{id}/resume(id=${n.id})}"><i class="bi bi-play-fill me-1"></i>Resume</button>
+        <a class="btn btn-primary" th:href="@{/ui/notifications/{id}/edit(id=${n.id})}"><i class="bi bi-pencil me-1"></i>Edit</a>
+        <div class="dropdown">
+          <button class="btn btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-label="More"><i class="bi bi-three-dots"></i></button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" th:href="@{/ui/notifications/{id}/copy(id=${n.id})}"><i class="bi bi-copy me-2"></i>Copy to a new notification</a></li>
+            <li><a class="dropdown-item" th:href="@{/ui/history(notificationId=${n.id})}"><i class="bi bi-clock-history me-2"></i>Full history</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><button type="button" class="dropdown-item text-danger" hx-swap="none" data-confirm-label="Delete"
+                        th:hx-delete="@{/ui/notifications/{id}(id=${n.id}, redirect=true)}"
+                        th:hx-confirm="'Delete ' + ${n.title} + '? Its history is kept.'"><i class="bi bi-trash me-2"></i>Delete</button></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-xl-8">
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-envelope-paper"></i>Message
+            <span class="ms-auto small fw-normal text-body-secondary" th:text="${n.format.label} + ', as it will be sent'">Markdown</span></div>
+          <div class="card-body">
+            <div class="message-subject" th:text="${message.subject}">Subject</div>
+            <div class="message-preview rendered" th:utext="${message.html}">body</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><i class="bi bi-clock-history"></i>History
+            <a th:href="@{/ui/history(notificationId=${n.id})}" class="ms-auto small fw-normal">All of it</a></div>
+          <div class="table-responsive">
+            <table class="table table-sm">
+              <tbody>
+              <tr th:each="e : ${history}">
+                <td class="text-nowrap small"><time data-format="datetime" th:datetime="${e.occurredAt}"></time></td>
+                <td><span th:replace="~{ui/layout :: event(${e.type})}"></span></td>
+                <td class="small">
+                  <span th:if="${e.target != null}" class="fw-medium" th:text="${e.target}">target</span>
+                  <span class="text-body-secondary" th:text="${e.detail}">detail</span>
+                  <span th:if="${e.attempts != null and e.attempts > 1}" class="text-body-secondary" th:text="'(' + ${e.attempts} + ' attempts)'"></span>
+                </td>
+                <td class="small text-body-secondary text-nowrap">
+                  <th:block th:if="${e.trigger != null and e.trigger.name() == 'MANUAL'}"><i class="bi bi-hand-index me-1" title="Sent by hand"></i></th:block>
+                  <span th:text="${e.actor}">actor</span></td>
+              </tr>
+              <tr th:if="${history.isEmpty()}"><td colspan="4">
+                <div th:replace="~{ui/layout :: empty('bi-clock', 'No history yet', 'Its changes and deliveries are recorded here.')}"></div>
+              </td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-4">
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-calendar-event"></i>Schedule</div>
+          <div class="card-body">
+            <dl class="props">
+              <dt>Kind</dt><dd th:text="${n.schedule.kind.label}">One-off</dd>
+              <th:block th:if="${n.schedule.kind.name() == 'ONCE'}">
+                <dt>At</dt><dd th:text="${#temporals.format(n.schedule.runAt.atZone(n.schedule.zone), 'EEEE d MMMM yyyy, h:mm a z')}">time</dd>
+              </th:block>
+              <th:block th:unless="${n.schedule.kind.name() == 'ONCE'}">
+                <dt>Cron</dt><dd><span class="mono" th:text="${n.schedule.cron}">cron</span>
+                  <div class="small text-body-secondary" th:if="${cronMeaning != null}" th:text="${cronMeaning}"></div></dd>
+                <dt>Until</dt><dd th:text="${n.schedule.until != null} ? ${#temporals.format(n.schedule.until.atZone(n.schedule.zone), 'd MMMM yyyy')} : 'no end date'">until</dd>
+              </th:block>
+              <dt>Time zone</dt><dd th:text="${n.schedule.zone.id}">zone</dd>
+              <dt>Last sent</dt><dd><time th:if="${n.lastRunAt != null}" data-format="datetime" th:datetime="${n.lastRunAt}"></time>
+                <span th:if="${n.lastRunAt == null}" class="text-body-secondary">never on schedule</span></dd>
+            </dl>
+            <th:block th:if="${!upcoming.isEmpty()}">
+              <div class="fw-semibold small mt-3 mb-1">Next runs</div>
+              <ol class="upcoming-runs">
+                <li th:each="t : ${upcoming}" th:text="${#temporals.format(t.atZone(n.schedule.zone), 'EEE d MMM yyyy, h:mm a z')}">time</li>
+              </ol>
+            </th:block>
+            <div class="alert alert-warning small mt-3 mb-0" th:if="${n.status.name() == 'PAUSED'}">
+              <i class="bi bi-pause-circle me-1"></i>Paused: nothing is sent until it is resumed. A recurring schedule picks up at its next run.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><i class="bi bi-send"></i>Deliveries</div>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item delivery-item" th:each="d : ${deliveries}" th:classappend="${!d.enabled} ? 'opacity-50'">
+              <i class="bi plugin-icon" th:classappend="'bi-' + ${d.icon}"></i>
+              <div class="min-w-0 flex-grow-1">
+                <div class="fw-medium"><span th:text="${d.label != null and !#strings.isEmpty(d.label)} ? ${d.label} : ${d.pluginName}">Discord</span>
+                  <span class="badge text-bg-secondary ms-1" th:unless="${d.enabled}">disabled</span>
+                  <span class="badge text-bg-warning ms-1" th:unless="${d.ready}" th:title="${d.reason}">not ready</span></div>
+                <div class="small text-body-secondary text-truncate" th:text="${d.pluginName} + ' · ' + ${d.summary}">summary</div>
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-secondary" th:if="${canEdit}" title="Send through this delivery only"
+                      hx-swap="none" data-confirm-label="Send test"
+                      th:hx-post="@{/ui/notifications/{id}/send(id=${n.id}, deliveryId=${d.id})}"
+                      th:hx-confirm="'Send ' + ${n.title} + ' now through ' + ${d.pluginName} + ' (' + ${d.summary} + ') only?'">Test</button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

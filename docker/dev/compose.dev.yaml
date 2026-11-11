@@ -1,0 +1,48 @@
+# Development support services: PostgreSQL for notifications and the audit trail, and
+# Mailpit to catch email. The application itself runs in the IDE; see docker/local for
+# running it here too. Usage is in docker/dev/README.md.
+#
+# Run from the repository root, which holds .env:
+#   docker compose -f docker/dev/compose.dev.yaml --env-file .env up -d
+name: group-notify-manager
+
+services:
+  # Notifications, their deliveries and the audit trail, in the group_notify schema. The
+  # application's role owns that schema and creates its tables; docker/postgres/initdb
+  # creates the role on the first start with an empty volume, so changing its password
+  # in .env afterwards needs ALTER ROLE as well.
+  postgres:
+    image: postgres:17
+    environment:
+      # The instance's superuser, for administration only; the application has its own.
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?run scripts/bootstrap.sh first}
+      POSTGRES_DB: ${POSTGRES_DB:?run scripts/bootstrap.sh first}
+      POSTGRES_APP_USERNAME: ${POSTGRES_APP_USERNAME:?run scripts/bootstrap.sh first}
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:?run scripts/bootstrap.sh first}
+    ports:
+      # 5433, so it runs beside iot-pipeline's PostgreSQL on 5432.
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # :z relabels the files for SELinux hosts (e.g. Fedora); harmless elsewhere.
+      - ../postgres/initdb:/docker-entrypoint-initdb.d:ro,z
+    healthcheck:
+      # Over TCP, which the server only listens on once initialisation has finished; the
+      # socket answers earlier, while the init scripts are still running.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    restart: unless-stopped
+
+  # Catches every email the application sends, groups.io posts included, so nothing
+  # reaches a real inbox while developing: SMTP on 1025, the inbox at http://localhost:8025.
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

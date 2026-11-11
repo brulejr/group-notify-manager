@@ -1,0 +1,77 @@
+# Local provisioning: the application in a container, with PostgreSQL and Mailpit.
+# Usage is in docker/local/README.md.
+#
+# Run from the repository root, after building the jar:
+#   ./gradlew bootJar
+#   docker compose -f docker/local/compose.local.yaml --env-file .env up -d --build
+#
+# Self-contained: the services are defined here rather than included from docker/dev.
+# The project name is the same as docker/dev's, so the two share their data volume and
+# this replaces the development containers rather than running beside them. Stop the
+# copy running in the IDE first: two schedulers would send everything twice. Keep the
+# shared services in step with docker/dev by hand.
+name: group-notify-manager
+
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile
+    image: group-notify-manager:local
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PROFILE: prod
+      # Inside the compose network PostgreSQL is always on 5432, whatever POSTGRES_PORT
+      # publishes it as on the host.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:?run scripts/bootstrap.sh first}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_APP_USERNAME:?run scripts/bootstrap.sh first}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_APP_PASSWORD:?run scripts/bootstrap.sh first}
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      MAIL_SMTP_AUTH: "false"
+      MAIL_STARTTLS: "false"
+      MAIL_FROM: ${MAIL_FROM:-notify@localhost}
+      DEFAULT_ZONE: ${DEFAULT_ZONE:-America/New_York}
+      # No Authelia locally: every request is this user. Never do this in production.
+      NOTIFY_SECURITY_DEV_USER_USERNAME: ${DEV_USER:-devuser}
+      NOTIFY_SECURITY_DEV_USER_GROUPS: ${DEV_USER_GROUPS:-homelab_admins,notify_club}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM: ${TWILIO_FROM:-}
+    ports:
+      - "${APP_PORT:-5002}:5002"
+    volumes:
+      # Extra delivery plugins; see docs/plugins.md.
+      - ../../plugins-dir:/app/plugins:ro,z
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?run scripts/bootstrap.sh first}
+      POSTGRES_DB: ${POSTGRES_DB:?run scripts/bootstrap.sh first}
+      POSTGRES_APP_USERNAME: ${POSTGRES_APP_USERNAME:?run scripts/bootstrap.sh first}
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:?run scripts/bootstrap.sh first}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../postgres/initdb:/docker-entrypoint-initdb.d:ro,z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

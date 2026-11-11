@@ -1,0 +1,23 @@
+# Every @SpringBootTest runs with this profile: nothing in it reaches a database, a
+# broker or an SMTP server, and nothing is sent on a schedule.
+notify:
+  notifications:
+    store: memory
+  audit:
+    store: memory
+  dispatch:
+    enabled: false
+  security:
+    admin-group: homelab_admins
+  groups:
+    pattern: "notify_.*"
+    names:
+      notify_club: Radio Club
+
+spring:
+  # Nowhere: 5432 may be a real PostgreSQL, and nothing here should reach it.
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:1/unused
+    username: unused
+    password: unused
+

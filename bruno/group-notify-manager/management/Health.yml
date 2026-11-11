@@ -1,0 +1,21 @@
+info:
+  name: Health
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{notify_url}}/mgmt/health"
+  headers:
+    - name: Remote-User
+      value: "{{remote_user}}"
+    - name: Remote-Groups
+      value: "{{remote_groups}}"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

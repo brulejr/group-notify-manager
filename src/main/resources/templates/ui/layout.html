@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<!--/* The console's frame: sidebar, top bar, toast area and the dialogs every page shares.
+       A page replaces its <html> with page(title, active, ~{::main}). */-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:fragment="page(title, active, content)">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="htmx-config" content='{"defaultSwapStyle":"innerHTML","scrollIntoViewOnBoost":false}'>
+  <!--/* htmx sends the token back as a header on every request; see notify.js. */-->
+  <meta name="csrf-header" th:if="${csrf != null}" th:content="${csrf.headerName}">
+  <meta name="csrf-token" th:if="${csrf != null}" th:content="${csrf.token}">
+  <title th:text="${title} + ' · ' + ${consoleTitle}">Group Notify</title>
+  <link rel="icon" type="image/svg+xml" th:href="@{/assets/favicon.svg}">
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap-icons/font/bootstrap-icons.min.css}">
+  <link rel="stylesheet" th:href="@{/webjars/easymde/dist/easymde.min.css}">
+  <link rel="stylesheet" th:href="@{/webjars/quill/dist/quill.snow.css}">
+  <link rel="stylesheet" th:href="@{/assets/notify.css}">
+  <script>
+    // Before first paint, so a dark page never flashes light.
+    (function () {
+      var theme = 'light';
+      try {
+        theme = localStorage.getItem('notify-theme')
+          || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      } catch (e) {}
+      document.documentElement.setAttribute('data-bs-theme', theme);
+    })();
+  </script>
+  <script defer th:src="@{/webjars/htmx.org/dist/htmx.min.js}"></script>
+  <script defer th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+  <script defer th:src="@{/webjars/easymde/dist/easymde.min.js}"></script>
+  <script defer th:src="@{/webjars/quill/dist/quill.js}"></script>
+  <script defer th:src="@{/assets/notify.js}"></script>
+</head>
+<body hx-boost="true">
+<div class="console-shell">
+  <nav class="console-sidebar offcanvas-lg offcanvas-start" id="sidebar" tabindex="-1" aria-label="Console navigation">
+    <div class="console-brand">
+      <a th:href="@{/ui}" class="d-flex align-items-center gap-2 text-decoration-none">
+        <span class="console-logo"><i class="bi bi-megaphone"></i></span>
+        <span>
+          <span class="d-block fw-semibold text-white lh-sm" th:text="${consoleTitle}">Group Notify</span>
+          <span class="d-block small console-brand-sub">Scheduled notifications</span>
+        </span>
+      </a>
+      <button type="button" class="btn-close btn-close-white d-lg-none ms-auto" data-bs-dismiss="offcanvas"
+              data-bs-target="#sidebar" aria-label="Close"></button>
+    </div>
+    <div class="console-nav">
+      <div class="console-nav-label">Overview</div>
+      <a th:href="@{/ui}" class="nav-link" th:classappend="${active == 'dashboard'} ? 'active'">
+        <i class="bi bi-speedometer2"></i><span>Dashboard</span></a>
+      <div class="console-nav-label">Notifications</div>
+      <a th:href="@{/ui/notifications}" class="nav-link" th:classappend="${active == 'notifications'} ? 'active'">
+        <i class="bi bi-bell"></i><span>All notifications</span></a>
+      <a th:href="@{/ui/notifications/new}" class="nav-link" th:classappend="${active == 'new'} ? 'active'"
+         th:if="${me != null and me.editor}">
+        <i class="bi bi-plus-circle"></i><span>New notification</span></a>
+      <a th:href="@{/ui/history}" class="nav-link" th:classappend="${active == 'history'} ? 'active'">
+        <i class="bi bi-clock-history"></i><span>History</span></a>
+      <div class="console-nav-label">Setup</div>
+      <a th:href="@{/ui/groups}" class="nav-link" th:classappend="${active == 'groups'} ? 'active'">
+        <i class="bi bi-people"></i><span>Groups</span></a>
+      <a th:href="@{/ui/plugins}" class="nav-link" th:classappend="${active == 'plugins'} ? 'active'">
+        <i class="bi bi-plug"></i><span>Delivery plugins</span></a>
+      <th:block th:if="${me != null and me.admin}">
+        <div class="console-nav-label">System</div>
+        <a th:href="@{/mgmt/health}" class="nav-link" hx-boost="false" target="_blank" rel="noopener">
+          <i class="bi bi-heart-pulse"></i><span>Health</span><i class="bi bi-box-arrow-up-right ms-auto small"></i></a>
+        <a th:href="@{/mgmt/info}" class="nav-link" hx-boost="false" target="_blank" rel="noopener">
+          <i class="bi bi-info-circle"></i><span>Info</span><i class="bi bi-box-arrow-up-right ms-auto small"></i></a>
+      </th:block>
+    </div>
+  </nav>
+
+  <div class="console-main">
+    <header class="console-topbar">
+      <button class="btn btn-sm btn-outline-secondary d-lg-none" type="button" data-bs-toggle="offcanvas"
+              data-bs-target="#sidebar" aria-controls="sidebar" aria-label="Open navigation">
+        <i class="bi bi-list"></i>
+      </button>
+      <span class="console-topbar-title" th:text="${title}">Page</span>
+      <span class="ms-auto d-flex align-items-center gap-2">
+        <span class="badge text-bg-warning" th:if="${devUser}" title="notify.security.dev-user is set: Authelia is bypassed">
+          <i class="bi bi-cone-striped me-1"></i>Development user</span>
+        <span class="htmx-indicator spinner-border spinner-border-sm text-secondary" id="global-indicator"
+              role="status" aria-label="Loading"></span>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-theme-toggle
+                title="Switch between light and dark" aria-label="Switch between light and dark">
+          <i class="bi bi-moon-stars theme-icon-light"></i><i class="bi bi-sun theme-icon-dark"></i>
+        </button>
+        <div class="dropdown" th:if="${me != null}">
+          <button class="btn btn-sm btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2" type="button"
+                  data-bs-toggle="dropdown" aria-expanded="false">
+            <span class="avatar" th:text="${#strings.toUpperCase(#strings.substring(me.displayName, 0, 1))}">D</span>
+            <span class="d-none d-sm-inline" th:text="${me.displayName}">Dev User</span>
+          </button>
+          <div class="dropdown-menu dropdown-menu-end user-menu">
+            <div class="px-3 py-2">
+              <div class="fw-semibold" th:text="${me.displayName}">Dev User</div>
+              <div class="small text-body-secondary mono" th:text="${me.username}">devuser</div>
+              <div class="small text-body-secondary" th:if="${me.email != null}" th:text="${me.email}">dev@example.org</div>
+              <div class="mt-2 d-flex flex-wrap gap-1">
+                <span class="badge text-bg-primary" th:if="${me.admin}"><i class="bi bi-shield-lock me-1"></i>Admin</span>
+                <span class="badge text-bg-secondary" th:unless="${me.editor}">Read only</span>
+                <span class="badge badge-soft bg-body-tertiary text-body-secondary border-secondary-subtle"
+                      th:each="g : ${me.groups}" th:text="${g}">group</span>
+              </div>
+            </div>
+            <th:block th:if="${logoutUrl != null and !#strings.isEmpty(logoutUrl)}">
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" th:href="${logoutUrl}" hx-boost="false"><i class="bi bi-box-arrow-right me-2"></i>Sign out</a>
+            </th:block>
+          </div>
+        </div>
+      </span>
+    </header>
+    <main th:replace="${content}">Content</main>
+  </div>
+</div>
+
+<div id="toasts" class="toast-container position-fixed bottom-0 end-0 p-3" aria-live="polite"></div>
+
+<div class="modal fade" id="modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content" id="modal-content"></div>
+  </div>
+</div>
+
+<div class="modal fade" id="confirm" tabindex="-1" aria-hidden="true" aria-labelledby="confirm-title">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h2 class="modal-title fs-5" id="confirm-title"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Are you sure?</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cancel"></button>
+      </div>
+      <div class="modal-body confirm-question"></div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" data-confirm-ok>Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
+
+<!--/* A notice for the corner, moved there out of band from whatever response carries it. */-->
+<div th:fragment="toast(toast)" th:if="${toast != null}" hx-swap-oob="beforeend:#toasts">
+  <div class="toast align-items-center border-0" role="status" aria-atomic="true"
+       th:classappend="'text-bg-' + ${toast.level}">
+    <div class="d-flex">
+      <div class="toast-body">
+        <i class="bi me-1" th:classappend="${toast.level == 'success'} ? 'bi-check-circle' : 'bi-exclamation-circle'"></i>
+        <span th:text="${toast.message}">Saved</span>
+      </div>
+      <button type="button" class="btn-close me-2 m-auto" th:classappend="${toast.level == 'warning'} ? '' : 'btn-close-white'"
+              data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
+<!--/* A response that is only a notice: the dialog it answers closes, and nothing else changes. */-->
+<th:block th:fragment="toastOnly"><div th:replace="~{ui/layout :: toast(${toast})}"></div></th:block>
+
+<!--/* An empty table or list, explained. */-->
+<div th:fragment="empty(icon, heading, text)" class="console-empty">
+  <i class="bi" th:classappend="${icon}"></i>
+  <div class="fw-semibold" th:text="${heading}">Nothing here</div>
+  <div class="text-body-secondary small" th:text="${text}">Nothing to show yet.</div>
+</div>
+
+<!--/* A notification's status. */-->
+<span th:fragment="status(status)" class="badge" th:classappend="'text-bg-' + ${status.level}" th:text="${status.label}">Active</span>
+
+<!--/* A group, by its display name, with its real name on hover. */-->
+<span th:fragment="group(name, display)" class="badge badge-soft bg-body-tertiary text-body-emphasis border-secondary-subtle"
+      th:title="${name}"><i class="bi bi-people me-1"></i><span th:text="${display}">group</span></span>
+
+<!--/* An audit event's type. */-->
+<span th:fragment="event(type)" class="badge event-badge" th:classappend="'text-bg-' + ${type.level}" th:text="${type.label}">Sent</span>

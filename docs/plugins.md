@@ -1,33 +1,50 @@
 # Delivery plugins
 
-A delivery plugin is one way of sending a notification. Four are bundled; anything
+A delivery plugin is one way of sending a notification. Two are bundled; anything
 else, a packet radio gateway, a pager, Matrix, is a plugin you write and drop in.
 
 ## The bundled plugins
 
 ### groups.io (`groupsio`)
 
-Posts to a group or subgroup by emailing its posting address, the way any member
-posts. Uses the application's SMTP server.
+Posts a new topic to a group through the [groups.io REST API](https://groups.io/api),
+as the member whose API key it holds: `newdraft`, then `updatedraft` with the subject
+and the sanitised HTML body, then `postdraft`. It then finds the post in the archive
+(`getmessages`), which `postdraft` does not return, so the history links to it, and
+applies any topic settings to the topic it started (`updatetopic`). Everything it uses
+is on groups.io's free plan; subgroups, which are not, are not offered.
 
 | Field | |
 | --- | --- |
-| Group | `myclub`, `myclub+events` for a subgroup, or a full address |
+| Group | The name in `groups.io/g/<name>`, e.g. `myclub` |
 | Hashtags | Prepended to the subject, e.g. `#announcement`; groups.io files the post under them |
+| Special notice | Reaches every member, even those on no email or digests. Moderators and owners only |
+| Post as the group's owners | Sent from the group's owner address. Moderators and owners only |
+| Pin to the top | The topic stays at the top of the archive |
+| Lock the topic | No replies: for announcements |
+| Replies go | To the group, the sender, both, only the sender, or the moderators; blank keeps the group's default |
+| Moderate replies | Replies wait for approval |
+
+The topic settings need the owner's or a moderator's `edit_archives` permission. They
+cannot undo the post, so if the post cannot be found in the archive or groups.io
+refuses a setting, the delivery still counts as sent and its detail says what was not
+applied. A post held for approval has no topic yet, so they are skipped.
 
 | Setting (`notify.delivery.settings.groupsio.*`) | |
 | --- | --- |
-| `from` (`GROUPSIO_FROM`) | The member address to post as; default `notify.delivery.mail.from` |
-| `domain` | Default `groups.io` |
+| `api-key` (`GROUPSIO_API_KEY`) | Required. Create one at https://groups.io/settings/apikeys |
+| `api-base-url` | Default `https://groups.io`; a group on its own domain uses that |
+| `timeout` | Seconds per call; default 15 |
+| `lookup-attempts`, `lookup-delay-ms` | How often, and how far apart, to look for the new post in the archive, which can lag a little; default 4 and 1500 |
 
-The sender must be subscribed with permission to post. A moderated group holds the
-post unless that member may post unmoderated.
+The key's member must be subscribed with permission to post. A moderated group holds
+the post unless that member may post unmoderated; the history then says *held for
+moderator approval*. groups.io's own refusals (`not subscribed`, `need hashtag`,
+`restricted hashtag`, …) are recorded as they are, and the unused draft is deleted.
 
-### Email (`email`)
-
-HTML with a plain-text alternative, through `spring.mail.*`. Fields: To, Cc, Bcc
-(for a list whose members should not see one another), Reply to, Subject prefix. No
-settings beyond `notify.delivery.mail.from` and `from-name`.
+Failures before the post (groups.io busy or unreachable) are retried. A timeout or
+server error during the post itself is not: groups.io may have posted it, and a
+retry could post twice, so check the group before sending again.
 
 ### Discord (`discord`)
 
@@ -40,22 +57,6 @@ or a role id; nothing pings otherwise. Text is cut to Discord's limits.
 | --- | --- |
 | `allowed-hosts` | Webhook hosts accepted; default Discord's own |
 | `timeout` | Seconds; default 10 |
-
-### SMS (`sms`)
-
-One message per number through Twilio, so recipients never see each other. Fields:
-numbers (E.164), a prefix such as `[Club]`, whether to start with the subject.
-
-| Setting | Environment | |
-| --- | --- | --- |
-| `account-sid` | `TWILIO_ACCOUNT_SID` | required |
-| `auth-token` | `TWILIO_AUTH_TOKEN` | required (an API key secret works, with `api-key-sid`) |
-| `from` | `TWILIO_FROM` | the sending number, or… |
-| `messaging-service-sid` | `TWILIO_MESSAGING_SERVICE_SID` | …a messaging service |
-| `max-length` | | default 1600 |
-
-A send that reaches some numbers but not others is recorded as a failure naming the
-numbers that failed, and is not retried, so nobody is texted twice.
 
 ### Log only (`log`)
 
@@ -70,15 +71,16 @@ Each plugin's installation settings live under `notify.delivery.settings.<id>`:
 notify:
   delivery:
     settings:
-      sms:
-        account-sid: ACxxxxxxxx
-        auth-token: ${TWILIO_AUTH_TOKEN}
+      groupsio:
+        api-key: ${GROUPSIO_API_KEY}
+      discord:
+        timeout: 15
 ```
 
 Keys are matched in kebab case however they are written, so an environment variable
-works directly: `NOTIFY_DELIVERY_SETTINGS_SMS_AUTH_TOKEN`. A plugin missing a setting
+works directly: `NOTIFY_DELIVERY_SETTINGS_DISCORD_TIMEOUT`. A plugin missing a setting
 still loads, shows as **not ready** in the console with the reason, and its deliveries
-fail with that reason until it is configured. `notify.delivery.disabled: [sms]` stops a
+fail with that reason until it is configured. `notify.delivery.disabled: [discord]` stops a
 plugin loading at all.
 
 ## Writing a plugin

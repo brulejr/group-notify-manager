@@ -6,4 +6,4 @@ include("plugin-api")
 
 // The delivery plugins shipped with the application. Each is its own jar, found at runtime
 // through java.util.ServiceLoader exactly as an external plugin dropped into plugins/ is.
-include("plugins:discord", "plugins:email", "plugins:groupsio", "plugins:sms")
+include("plugins:discord", "plugins:groupsio")

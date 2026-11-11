@@ -33,13 +33,11 @@ services:
       MAIL_SMTP_AUTH: "false"
       MAIL_STARTTLS: "false"
       MAIL_FROM: ${MAIL_FROM:-notify@localhost}
+      GROUPSIO_API_KEY: ${GROUPSIO_API_KEY:-}
       DEFAULT_ZONE: ${DEFAULT_ZONE:-America/New_York}
       # No Authelia locally: every request is this user. Never do this in production.
       NOTIFY_SECURITY_DEV_USER_USERNAME: ${DEV_USER:-devuser}
       NOTIFY_SECURITY_DEV_USER_GROUPS: ${DEV_USER_GROUPS:-homelab_admins,notify_club}
-      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
-      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
-      TWILIO_FROM: ${TWILIO_FROM:-}
     ports:
       - "${APP_PORT:-5002}:5002"
     volumes:

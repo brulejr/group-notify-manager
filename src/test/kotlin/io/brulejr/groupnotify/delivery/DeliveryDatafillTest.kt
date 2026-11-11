@@ -33,9 +33,9 @@ class DeliveryDatafillTest {
 
     @Test
     fun `plugin settings bind from YAML in kebab case`() {
-        val datafill = bind(MapPropertySource("yaml", mapOf("notify.delivery.settings.sms.account-sid" to "AC1")))
+        val datafill = bind(MapPropertySource("yaml", mapOf("notify.delivery.settings.aprs.account-sid" to "AC1")))
 
-        assertEquals(mapOf("account-sid" to "AC1"), datafill.settingsFor("sms"))
+        assertEquals(mapOf("account-sid" to "AC1"), datafill.settingsFor("aprs"))
     }
 
     @Test
@@ -43,11 +43,11 @@ class DeliveryDatafillTest {
         val datafill = bind(
             SystemEnvironmentPropertySource(
                 StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME,
-                mapOf("NOTIFY_DELIVERY_SETTINGS_SMS_AUTH_TOKEN" to "t0k3n", "NOTIFY_DELIVERY_SETTINGS_SMS_ACCOUNT_SID" to "AC9"),
+                mapOf("NOTIFY_DELIVERY_SETTINGS_APRS_AUTH_TOKEN" to "t0k3n", "NOTIFY_DELIVERY_SETTINGS_APRS_ACCOUNT_SID" to "AC9"),
             ),
         )
 
-        assertEquals(mapOf("auth-token" to "t0k3n", "account-sid" to "AC9"), datafill.settingsFor("sms"))
+        assertEquals(mapOf("auth-token" to "t0k3n", "account-sid" to "AC9"), datafill.settingsFor("aprs"))
     }
 
     @Test

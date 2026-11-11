@@ -15,7 +15,7 @@ import org.jsoup.nodes.TextNode
 
 /**
  * HTML as Markdown, for Discord and for switching a body from the WYSIWYG editor to the
- * Markdown one, or as plain text, for SMS and radio.
+ * Markdown one, or as plain text, for radio and other text-only channels.
  *
  * Covers what the editors produce: paragraphs, breaks, headings, emphasis, links, lists
  * (nested too), quotes, code, rules and simple tables. Anything else contributes its

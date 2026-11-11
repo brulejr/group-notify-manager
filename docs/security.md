@@ -81,7 +81,7 @@ requests. The Bruno collection sends `X-Requested-With` on its body-less calls.
 
 ## Secrets
 
-Plugin credentials (Twilio token, SMTP password) are installation settings, from the
+Plugin credentials (such as the SMTP password) are installation settings, from the
 environment, never in the database. Per-delivery secrets, such as a Discord webhook
 URL, are stored with the notification but never returned: the API shows `********`
 and the form an empty input. Sending either back keeps the stored value. They are not

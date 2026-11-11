@@ -43,4 +43,4 @@ ensure_env POSTGRES_APP_PASSWORD "$(password)"
 
 echo
 echo "Secrets are in .env, which is gitignored. Keep it out of version control."
-echo "Twilio, SMTP and the like are added to .env by hand; see docs/configuration.md."
+echo "SMTP and other plugin settings are added to .env by hand; see docs/configuration.md."

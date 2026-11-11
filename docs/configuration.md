@@ -11,13 +11,7 @@ upper case (`notify.dispatch.misfire-grace` → `NOTIFY_DISPATCH_MISFIRE_GRACE`)
 the rest by hand:
 
 ```properties
-MAIL_HOST=smtp.gmail.com
-MAIL_USERNAME=me@gmail.com
-MAIL_PASSWORD=<app password>
-MAIL_FROM=me@gmail.com
-TWILIO_ACCOUNT_SID=AC...
-TWILIO_AUTH_TOKEN=...
-TWILIO_FROM=+15551234567
+GROUPSIO_API_KEY=<from https://groups.io/settings/apikeys>
 ```
 
 `application-local.yml` (copy `application-local.example.yml`; gitignored, and left out
@@ -51,7 +45,7 @@ of the boot jar) imports `.env` and sets the development user.
 | `notify.delivery.log-plugin` | | true | |
 | `notify.delivery.mail.from`, `.from-name` | `MAIL_FROM`, `MAIL_FROM_NAME` | `notify@localhost` | |
 | `notify.delivery.settings.<id>.*` | | | Plugin settings; see [plugins.md](plugins.md) |
-| `spring.mail.host`, `.port`, `.username`, `.password` | `MAIL_HOST`, … | none | No host: email and groups.io not ready |
+| `spring.mail.host`, `.port`, `.username`, `.password` | `MAIL_HOST`, … | none | Optional; only for plugins that send mail |
 | `notify.content.date-format`, `.time-format`, `.locale` | | `EEEE, MMMM d, yyyy`, `h:mm a z`, `en-US` | For placeholders |
 | `notify.console.title` | `CONSOLE_TITLE` | Group Notify | |
 | `notify.console.refresh-interval` | | 30s | Dashboard reload |

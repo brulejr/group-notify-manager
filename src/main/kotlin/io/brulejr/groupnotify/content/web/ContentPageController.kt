@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.ResponseBody
 @RequestMapping("/ui/content")
 class ContentPageController(private val content: ContentService) {
 
-    /** The body as recipients get it: sanitised HTML, the Markdown Discord gets, and the text SMS gets. */
+    /** The body as recipients get it: sanitised HTML, the Markdown Discord gets, and plain text. */
     @PostMapping("/preview")
     fun preview(@RequestParam(defaultValue = "") body: String, @RequestParam(defaultValue = "MARKDOWN") format: BodyFormat, model: Model): String {
         model.addAttribute("html", content.html(body, format))

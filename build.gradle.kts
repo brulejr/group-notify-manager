@@ -51,9 +51,7 @@ dependencies {
     implementation(project(":plugin-api"))
     // The bundled plugins, found through ServiceLoader rather than referenced from code.
     runtimeOnly(project(":plugins:discord"))
-    runtimeOnly(project(":plugins:email"))
     runtimeOnly(project(":plugins:groupsio"))
-    runtimeOnly(project(":plugins:sms"))
 
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
@@ -63,7 +61,8 @@ dependencies {
     // Authelia: forward-auth headers by default, or OIDC sign-in; see SecurityConfig.
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-security-oauth2-client")
-    // The SMTP connection the email and groups.io plugins share, offered to them as a Mailer.
+    // An optional SMTP connection, offered to plugins that send mail as a Mailer (none of the
+    // bundled ones do).
     implementation("org.springframework.boot:spring-boot-starter-mail")
     // The console: server-rendered pages, made interactive with htmx.
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")

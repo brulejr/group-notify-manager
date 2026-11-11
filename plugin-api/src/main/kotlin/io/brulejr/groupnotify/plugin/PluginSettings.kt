@@ -11,7 +11,7 @@ package io.brulejr.groupnotify.plugin
 /**
  * A plugin's installation settings, from `notify.delivery.settings.<plugin id>.*`, keyed
  * as written there in kebab case, e.g. `account-sid`. Typically set from the environment,
- * e.g. `NOTIFY_DELIVERY_SETTINGS_SMS_ACCOUNT_SID`.
+ * e.g. `NOTIFY_DELIVERY_SETTINGS_DISCORD_TIMEOUT`.
  */
 data class PluginSettings(val values: Map<String, String>) {
 

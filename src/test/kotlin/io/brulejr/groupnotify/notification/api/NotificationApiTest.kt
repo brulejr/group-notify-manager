@@ -113,9 +113,8 @@ class NotificationApiTest : WebTest() {
             .andExpect(jsonPath("$.ready").value(true))
             .andExpect(jsonPath("$.fields[0].key").value("webhookUrl"))
             .andExpect(jsonPath("$.fields[0].secret").value(true))
-        // No SMTP server and no Twilio account in the tests.
-        mvc.perform(get("/api/plugins/email").alice()).andExpect(jsonPath("$.ready").value(false))
-        mvc.perform(get("/api/plugins/sms").alice()).andExpect(jsonPath("$.ready").value(false))
+        // No groups.io API key in the tests.
+        mvc.perform(get("/api/plugins/groupsio").alice()).andExpect(jsonPath("$.ready").value(false))
     }
 
     @Test

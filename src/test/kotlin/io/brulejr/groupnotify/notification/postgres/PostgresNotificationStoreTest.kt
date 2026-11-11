@@ -40,7 +40,7 @@ class PostgresNotificationStoreTest {
         status = NotificationStatus.ACTIVE,
         deliveries = listOf(
             NotificationDelivery(UUID.randomUUID(), "discord", mapOf("webhookUrl" to "https://x/y"), "Members"),
-            NotificationDelivery(UUID.randomUUID(), "sms", mapOf("to" to "+15551234567"), enabled = false),
+            NotificationDelivery(UUID.randomUUID(), "groupsio", mapOf("group" to "myclub"), enabled = false),
         ),
         nextRunAt = next, lastRunAt = null, createdBy = "alice", createdAt = now, updatedBy = "alice", updatedAt = now,
     )
@@ -55,7 +55,7 @@ class PostgresNotificationStoreTest {
 
         assertEquals(n, store.find(n.id))
         store.save(n.copy(title = "renamed", deliveries = n.deliveries.reversed()))
-        assertEquals(listOf("sms", "discord"), store.find(n.id)!!.deliveries.map { it.plugin })
+        assertEquals(listOf("groupsio", "discord"), store.find(n.id)!!.deliveries.map { it.plugin })
     }
 
     @Test

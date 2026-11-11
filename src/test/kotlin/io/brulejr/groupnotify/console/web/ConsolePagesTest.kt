@@ -8,6 +8,9 @@
  */
 package io.brulejr.groupnotify.console.web
 
+import io.brulejr.groupnotify.audit.AuditEvent
+import io.brulejr.groupnotify.audit.AuditEventType
+import io.brulejr.groupnotify.audit.AuditPort
 import io.brulejr.groupnotify.notification.BodyFormat
 import io.brulejr.groupnotify.notification.NotificationDraft
 import io.brulejr.groupnotify.notification.NotificationResult
@@ -40,6 +43,9 @@ class ConsolePagesTest : WebTest() {
 
     @Autowired
     lateinit var notifications: NotificationService
+
+    @Autowired
+    lateinit var audit: AuditPort
 
     private val alice = NotifyUser("alice", "Alice", null, setOf("notify_club"), admin = false, editor = true)
 
@@ -78,7 +84,7 @@ class ConsolePagesTest : WebTest() {
             "/ui/notifications/$recurring/edit" to "Save changes",
             "/ui/notifications/$once/edit" to "data-format=\"HTML\"",
             "/ui/notifications/$recurring/copy" to "Net night (copy)",
-            "/ui/notifications/delivery?plugin=sms&index=3" to "deliveries[3].target.to",
+            "/ui/notifications/delivery?plugin=groupsio&index=3" to "deliveries[3].target.group",
             "/ui/notifications/schedule-preview?kind=RECURRING&cron=0 9 * * MON&zone=America/New_York" to "Next runs",
             "/ui/notifications/schedule-preview?kind=RECURRING&cron=nonsense" to "not a valid cron",
             "/ui/history" to "Created",
@@ -137,6 +143,21 @@ class ConsolePagesTest : WebTest() {
         val cookie = jakarta.servlet.http.Cookie(SecurityConfig.CSRF_COOKIE, "c0ffee")
         val response = mvc.perform(get("/ui/notifications/new").alice().cookie(cookie)).andExpect(status().isOk).andReturn().response
         assertEquals(emptyList(), response.cookies.filter { it.name == SecurityConfig.CSRF_COOKIE }.map { it.value })
+    }
+
+    @Test
+    fun `a delivery's web reference links to it in the history, any other is shown as text`() {
+        fun sent(reference: String) = AuditEvent(
+            occurredAt = java.time.Instant.now(), type = AuditEventType.SENT, actor = AuditEvent.SCHEDULER,
+            notificationId = UUID.randomUUID(), notificationTitle = "Net night", group = "notify_club",
+            plugin = "groupsio", target = "brulenet", detail = "posted to brulenet", reference = reference,
+        )
+        audit.record(sent("https://groups.io/g/brulenet/message/321"))
+        audit.record(sent("javascript:alert(1)"))
+
+        mvc.perform(get("/ui/history").alice()).andExpect(status().isOk)
+            .andExpect(content().string(containsString("href=\"https://groups.io/g/brulenet/message/321\"")))
+            .andExpect(content().string(not(containsString("href=\"javascript:"))))
     }
 
     @Test

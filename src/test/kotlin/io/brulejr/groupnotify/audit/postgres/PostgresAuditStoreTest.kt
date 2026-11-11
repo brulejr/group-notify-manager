@@ -29,7 +29,7 @@ class PostgresAuditStoreTest {
 
     private fun event(type: AuditEventType, group: String = "notify_club", at: Instant = now) = AuditEvent(
         occurredAt = at, type = type, actor = "scheduler", notificationId = UUID.randomUUID(), notificationTitle = "t",
-        group = group, plugin = "sms", target = "+1•••4567", trigger = DispatchTrigger.SCHEDULE, detail = "ok", attempts = 1,
+        group = group, plugin = "groupsio", target = "myclub@groups.io", trigger = DispatchTrigger.SCHEDULE, detail = "ok", attempts = 1,
     )
 
     @BeforeEach

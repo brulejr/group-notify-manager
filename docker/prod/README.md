@@ -43,9 +43,8 @@ notifications each person sees. See [docs/security.md](../../docs/security.md).
 | `LOGOUT_URL` | | The console's sign-out link, e.g. `https://auth.brulenet.dev/logout` |
 | `TRUSTED_PROXIES` | | Where forward-auth headers are believed from |
 | `DEFAULT_ZONE` | | New notifications' time zone; default `America/New_York` |
-| `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`, `MAIL_FROM_NAME` | for email and groups.io | The SMTP server, e.g. Gmail with an app password |
-| `GROUPSIO_FROM` | | The member address groups.io posts go out as, if not `MAIL_FROM` |
-| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` or `TWILIO_MESSAGING_SERVICE_SID` | for SMS | The Twilio account |
+| `GROUPSIO_API_KEY` | for groups.io | An API key from https://groups.io/settings/apikeys; posts go out as its member |
+| `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`, `MAIL_FROM_NAME` | | An SMTP server, only for an external plugin that sends mail |
 | `PLUGINS_DIR` | | A host directory of extra plugin jars; default `plugins-dir/` in the checkout |
 
 Any other setting can be given by its full property name in upper case, e.g.

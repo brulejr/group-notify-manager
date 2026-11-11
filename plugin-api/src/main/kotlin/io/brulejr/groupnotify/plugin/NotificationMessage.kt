@@ -18,7 +18,7 @@ import java.time.Instant
  * @property subject a single line: an email subject, an embed title.
  * @property markdown the body as Markdown, for Discord and the like.
  * @property html the body as sanitised HTML, safe to put in an email.
- * @property text the body as plain text, for SMS and radio.
+ * @property text the body as plain text, for radio and other text-only channels.
  * @property group the OIDC group the notification belongs to.
  * @property scheduledFor when it was due; for a manual send, when it was asked for.
  */

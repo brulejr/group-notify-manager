@@ -2,7 +2,7 @@
 
 ```bash
 ./gradlew build                 # every module, with tests
-./gradlew :plugins:sms:test     # one plugin
+./gradlew :plugins:discord:test # one plugin
 ./gradlew bootRun               # the application on :5002
 ./gradlew bootJar               # build/libs/group-notify-manager.jar
 ```
@@ -11,7 +11,7 @@
 
 ```
 plugin-api/                     the plugin contract; testFixtures: fakes for plugin tests
-plugins/{discord,email,groupsio,sms}/
+plugins/{discord,groupsio}/
 src/main/kotlin/io/brulejr/groupnotify/
   platform/                     clock, Flyway migrator, StoreType
   security/                     forward-auth filter, OIDC mapping, NotifyUser, /api/me

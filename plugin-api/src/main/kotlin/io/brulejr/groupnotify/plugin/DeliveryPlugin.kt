@@ -9,7 +9,7 @@
 package io.brulejr.groupnotify.plugin
 
 /**
- * A way of delivering a notification: Discord, SMS, an email list, or anything else a
+ * A way of delivering a notification: Discord, a groups.io list, a radio gateway, or anything else a
  * plugin jar provides, such as a packet radio gateway.
  *
  * The application finds plugins with [java.util.ServiceLoader], so a plugin is a jar

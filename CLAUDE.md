@@ -1,7 +1,7 @@
 # group-notify-manager
 
 Kotlin / Spring Boot service that sends group notifications on schedule through
-pluggable deliveries (groups.io, email, Discord, SMS, and external plugin jars), with
+pluggable deliveries (groups.io, Discord, and external plugin jars), with
 an htmx console, a REST API and an audit trail, behind Authelia. `docs/DESIGN.md` is
 the authoritative design doc: read it before changing structure.
 
@@ -14,7 +14,7 @@ A Gradle multi-project build:
 - `plugin-api/`: the delivery plugin contract (`DeliveryPlugin`, `PluginContext`, …),
   free of Spring and of any dependency but the Kotlin standard library. Its
   `testFixtures` hold a fake context, a recording mailer and a stub HTTP server.
-- `plugins/<id>/`: the bundled plugins (discord, email, groupsio, sms). Each is its own
+- `plugins/<id>/`: the bundled plugins (discord, groupsio). Each is its own
   jar, found through `META-INF/services/io.brulejr.groupnotify.plugin.DeliveryPlugin`,
   never referenced from the application's code (they are `runtimeOnly`).
 - the root project: the application, package `io.brulejr.groupnotify`.

@@ -55,7 +55,9 @@
           <td class="small detail-cell">
             <span th:text="${e.detail}">detail</span>
             <span th:if="${e.attempts != null and e.attempts > 1}" class="text-body-secondary" th:text="'(' + ${e.attempts} + ' attempts)'"></span>
-            <span th:if="${e.reference != null}" class="text-body-secondary mono d-block text-truncate" th:text="${e.reference}" th:title="${e.reference}"></span>
+            <!--/* A plugin's reference is a link when it is a web address, e.g. the groups.io post. */-->
+            <a th:if="${e.reference != null and e.reference.startsWith('https://')}" class="mono d-block text-truncate" th:href="${e.reference}" th:text="${e.reference}" th:title="${e.reference}" target="_blank" rel="noopener" hx-boost="false"></a>
+            <span th:if="${e.reference != null and !e.reference.startsWith('https://')}" class="text-body-secondary mono d-block text-truncate" th:text="${e.reference}" th:title="${e.reference}"></span>
           </td>
           <td class="small text-nowrap">
             <i class="bi bi-hand-index me-1 text-body-secondary" th:if="${e.trigger != null and e.trigger.name() == 'MANUAL'}" title="Sent by hand"></i>

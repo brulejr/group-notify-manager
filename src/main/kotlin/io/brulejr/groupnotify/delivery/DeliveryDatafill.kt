@@ -15,8 +15,8 @@ import java.time.Duration
  * The delivery plugins and how deliveries are made.
  *
  * @property settings each plugin's installation settings, by plugin id, e.g.
- *   `notify.delivery.settings.sms.account-sid`. Keys are matched in kebab case whichever
- *   way they are written, so `NOTIFY_DELIVERY_SETTINGS_SMS_ACCOUNT_SID` works too.
+ *   `notify.delivery.settings.discord.allowed-hosts`. Keys are matched in kebab case whichever
+ *   way they are written, so `NOTIFY_DELIVERY_SETTINGS_DISCORD_ALLOWED_HOSTS` works too.
  * @property disabled plugin ids not to load, even though their jar is present.
  * @property logPlugin offers the built-in `log` plugin, which only writes to the log:
  *   for trying a schedule out.
@@ -24,9 +24,9 @@ import java.time.Duration
  * @property maxAttempts tries per delivery, the first included, when a plugin says a
  *   failure is worth retrying.
  * @property retryBackoff the wait before the second try; it doubles each time after.
- * @property mail the sender of email, used by the email and groups.io plugins. The SMTP
- *   server itself is Spring Boot's `spring.mail.*`; with no `spring.mail.host` they
- *   load but are not ready.
+ * @property mail the sender of email, for plugins that send mail; none of the bundled
+ *   ones do. The SMTP server itself is Spring Boot's `spring.mail.*`; with no
+ *   `spring.mail.host` such plugins load but are not ready.
  */
 @ConfigurationProperties("notify.delivery")
 data class DeliveryDatafill(
@@ -44,8 +44,7 @@ data class DeliveryDatafill(
     }
 
     /**
-     * @property from the address mail is sent from. groups.io only accepts posts from a
-     *   member, so for groups.io it must be subscribed to the group.
+     * @property from the address mail is sent from.
      * @property fromName shown beside it, e.g. `Radio Club`.
      */
     data class Mail(

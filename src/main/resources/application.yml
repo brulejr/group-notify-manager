@@ -4,7 +4,7 @@ spring.profiles.active: ${PROFILE:local}
 info:
   app:
     name: ${spring.application.name}
-    description: Scheduled group notifications over groups.io, email, Discord, SMS and plugins
+    description: Scheduled group notifications over groups.io, Discord and plugins
     profile: ${spring.profiles.active}
 
 server:
@@ -32,8 +32,7 @@ spring:
       # Every connection works in the application's own schema, so its SQL names none.
       schema: ${notify.database.schema}
 
-  # The SMTP server the email and groups.io plugins send through. Without a host they
-  # load but report themselves not ready. docker/dev runs Mailpit on 1025 for testing.
+  # Optional: an SMTP server for plugins that send mail. None of the bundled ones do. docker/dev runs Mailpit on 1025 for testing.
   mail:
     host: ${MAIL_HOST:}
     port: ${MAIL_PORT:587}
@@ -101,7 +100,7 @@ notify:
 
   # The delivery plugins. Each plugin's settings go under settings.<plugin id>; see
   # docs/plugins.md for what each takes. Secrets belong in the environment, e.g.
-  # NOTIFY_DELIVERY_SETTINGS_SMS_AUTH_TOKEN.
+  # NOTIFY_DELIVERY_SETTINGS_<ID>_<SETTING>.
   delivery:
     max-attempts: 3
     retry-backoff: 5s
@@ -110,14 +109,9 @@ notify:
       from: ${MAIL_FROM:notify@localhost}
       from-name: ${MAIL_FROM_NAME:}
     settings:
-      sms:
-        account-sid: ${TWILIO_ACCOUNT_SID:}
-        auth-token: ${TWILIO_AUTH_TOKEN:}
-        from: ${TWILIO_FROM:}
-        messaging-service-sid: ${TWILIO_MESSAGING_SERVICE_SID:}
       groupsio:
-        # The member address posts go out as, if not notify.delivery.mail.from.
-        from: ${GROUPSIO_FROM:}
+        # From https://groups.io/settings/apikeys; posts go out as that key's member.
+        api-key: ${GROUPSIO_API_KEY:}
 
   content:
     date-format: "EEEE, MMMM d, yyyy"

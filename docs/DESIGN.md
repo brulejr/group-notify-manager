@@ -111,10 +111,10 @@ the plugin. Secret fields never leave the server. A plugin's failure is either
 retryable (timeouts, 5xx, rate limits) or not; retryable ones are retried up to
 `max-attempts` with doubling backoff. A plugin that throws is treated as failing.
 
-Bundled: **groups.io** (posts by email to the group's address as a member, hashtags
-in the subject), **email** (SMTP, HTML with text alternative), **Discord** (channel
-webhook, embed or plain, explicit `allowed_mentions`), **SMS** (Twilio, one message
-per number, no retry after a partial send).
+Bundled: **groups.io** (REST API: draft, update, post as the API key's member;
+hashtags in the subject; topic settings applied after posting; no retry once the
+post's outcome is unclear) and **Discord** (channel webhook, embed or plain, explicit
+`allowed_mentions`).
 
 ## Dispatch
 
@@ -151,10 +151,11 @@ delete), `audit_events`.
 
 1. **Secrets at rest.** Discord webhook URLs and the like are stored in plain `jsonb`.
    **Proposed:** encrypt secret fields with a key from the environment.
-2. **groups.io API.** Posting is by email, which needs the sender subscribed. The
-   groups.io API could post as a moderator instead; worth it if moderated groups hold
-   posts.
-3. **Recipients from LDAP.** Email and SMS targets are typed in. They could come from
+2. **Finding a groups.io post.** `postdraft` answers without the new message, so the
+   plugin finds it in the archive: the newest message by the key's member, posted
+   since the send began, whose subject carries the notification's. Two identical
+   notifications sent at once to the same group could be confused.
+3. **Recipients from LDAP.** Delivery targets are typed in. They could come from
    group members' LLDAP attributes, so "every member of notify_club" stays current.
 4. **More than one instance.** The conditional advance already prevents double sends;
    nothing else assumes one instance, but it has not been tried.

@@ -28,15 +28,15 @@ class PluginLoaderTest {
     fun `the bundled plugins are found through ServiceLoader, each from its own jar`() {
         val handles = loader().load(listOf(LogPlugin()), classLoader)
 
-        assertEquals(listOf("log", "discord", "email", "groupsio", "sms"), handles.map { it.id }.let { listOf(it.first()) + it.drop(1).sorted() })
+        assertEquals(listOf("log", "discord", "groupsio"), handles.map { it.id }.let { listOf(it.first()) + it.drop(1).sorted() })
         assertEquals("built in", handles.first().source)
     }
 
     @Test
     fun `a disabled plugin is not loaded`() {
-        val handles = loader(DeliveryDatafill(disabled = setOf("sms", "log"))).load(listOf(LogPlugin()), classLoader)
+        val handles = loader(DeliveryDatafill(disabled = setOf("discord", "log"))).load(listOf(LogPlugin()), classLoader)
 
-        assertFalse(handles.any { it.id == "sms" || it.id == "log" })
+        assertFalse(handles.any { it.id == "discord" || it.id == "log" })
     }
 
     @Test

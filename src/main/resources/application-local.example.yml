@@ -20,11 +20,13 @@ notify:
       notify_club: Radio Club
       notify_family: Family
 
-# docker/dev runs Mailpit: SMTP on 1025, its inbox on http://localhost:8025.
+# Mail goes to Mailpit (docker/dev: SMTP on 1025, its inbox on http://localhost:8025)
+# unless .env names a real server: set MAIL_HOST, MAIL_PORT=587, MAIL_SMTP_AUTH=true,
+# MAIL_STARTTLS=true, MAIL_USERNAME and MAIL_PASSWORD there to send for real.
 spring:
   mail:
-    host: localhost
-    port: 1025
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
     properties:
-      mail.smtp.auth: false
-      mail.smtp.starttls.enable: false
+      mail.smtp.auth: ${MAIL_SMTP_AUTH:false}
+      mail.smtp.starttls.enable: ${MAIL_STARTTLS:false}

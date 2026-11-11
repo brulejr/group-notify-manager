@@ -23,7 +23,7 @@ http:
         "schedule": {"kind": "RECURRING", "cron": "0 18 * * TUE#2", "zone": "America/New_York"},
         "deliveries": [
           {"plugin": "log", "target": {"body": "text"}},
-          {"plugin": "email", "label": "Members", "target": {"to": "members@example.org"}}
+          {"plugin": "groupsio", "label": "Members", "target": {"group": "myclub"}}
         ]
       }
   auth: inherit

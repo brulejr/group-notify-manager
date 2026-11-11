@@ -21,7 +21,7 @@ without internet.
 - **Body**: switch between **Markdown** (EasyMDE, with its own side preview) and
   **Rich text** (Quill). Switching converts what is there; going from rich text to
   Markdown loses colours and alignment. **Preview** shows the body exactly as each kind
-  of delivery receives it: sanitised HTML, the Markdown Discord gets, the text SMS gets.
+  of delivery receives it: sanitised HTML, the Markdown Discord gets, and plain text.
 - **Schedule**: one-off at a date and time, or recurring by cron with an optional last
   day, in a time zone. The next runs appear as you type.
 - **Deliveries**: **Add delivery** and pick a plugin; its fields appear. A label is

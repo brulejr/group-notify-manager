@@ -51,7 +51,7 @@ class PluginLoader(
 
     /**
      * The jar a plugin class came from, by file name. Inside the boot jar the location is
-     * a nested URL, `jar:nested:/app/app.jar/!BOOT-INF/lib/notify-plugin-sms.jar!/`, so the
+     * a nested URL, `jar:nested:/app/app.jar/!BOOT-INF/lib/notify-plugin-discord.jar!/`, so the
      * last `.jar` named is the plugin's own.
      */
     private fun sourceOf(type: Class<*>): String =

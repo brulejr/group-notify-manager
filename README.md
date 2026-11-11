@@ -24,9 +24,7 @@ flowchart LR
         scheduler --> audit[(audit trail)]
     end
     plugins --> groupsio[groups.io]
-    plugins --> email[Email]
     plugins --> discord[Discord]
-    plugins --> sms[SMS via Twilio]
     plugins -.-> more[your plugin: APRS, Winlink…]
 ```
 
@@ -35,17 +33,18 @@ flowchart LR
 - **Schedules** are one-off or recurring (cron, in the notification's own time zone,
   with an optional end date). Notifications can be paused and resumed.
 - **Bodies** are written in Markdown or a WYSIWYG editor; each delivery gets the form
-  it suits: sanitised HTML for email, Markdown for Discord, plain text for SMS.
+  it suits: sanitised HTML for groups.io, Markdown for Discord, plain text for
+  plugins that need it.
   Placeholders such as `{{date}}` are filled in when it is sent.
-- **Deliveries are plugins.** groups.io, email, Discord and SMS are bundled; a new one
+- **Deliveries are plugins.** groups.io and Discord are bundled; a new one
   is a jar implementing a small, dependency-free interface, dropped into `plugins-dir/`.
 - **The audit trail** records every change and every delivery, with its outcome.
 
 ## Status
 
-Working end to end: the console, the REST API, scheduling, the four bundled
+Working end to end: the console, the REST API, scheduling, the two bundled
 plugins, external plugins, the audit trail, and both Authelia modes. Not yet
-exercised against real Twilio, Discord or groups.io accounts, nor the PostgreSQL
+exercised against real Discord or groups.io accounts, nor the PostgreSQL
 stores against a live database (their tests need Docker).
 
 ## Requirements

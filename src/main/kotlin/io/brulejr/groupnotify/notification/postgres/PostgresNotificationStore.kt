@@ -49,14 +49,14 @@ class PostgresNotificationStore(
             jdbc.sql(
                 """
                 INSERT INTO notifications (id, group_name, title, subject, body, body_format, schedule_kind, run_at, cron,
-                                           zone, until, status, next_run_at, last_run_at, created_by, created_at,
+                                           pattern, zone, until, status, next_run_at, last_run_at, created_by, created_at,
                                            updated_by, updated_at)
                 VALUES (:id, :group, :title, :subject, :body, :format, :kind, :runAt, :cron,
-                        :zone, :until, :status, :nextRunAt, :lastRunAt, :createdBy, :createdAt, :updatedBy, :updatedAt)
+                        :pattern, :zone, :until, :status, :nextRunAt, :lastRunAt, :createdBy, :createdAt, :updatedBy, :updatedAt)
                 ON CONFLICT (id) DO UPDATE
                 SET group_name = EXCLUDED.group_name, title = EXCLUDED.title, subject = EXCLUDED.subject,
                     body = EXCLUDED.body, body_format = EXCLUDED.body_format, schedule_kind = EXCLUDED.schedule_kind,
-                    run_at = EXCLUDED.run_at, cron = EXCLUDED.cron, zone = EXCLUDED.zone, until = EXCLUDED.until,
+                    run_at = EXCLUDED.run_at, cron = EXCLUDED.cron, pattern = EXCLUDED.pattern, zone = EXCLUDED.zone, until = EXCLUDED.until,
                     status = EXCLUDED.status, next_run_at = EXCLUDED.next_run_at, last_run_at = EXCLUDED.last_run_at,
                     updated_by = EXCLUDED.updated_by, updated_at = EXCLUDED.updated_at
                 """,
@@ -70,6 +70,7 @@ class PostgresNotificationStore(
                 .param("kind", notification.schedule.kind.name)
                 .param("runAt", notification.schedule.runAt?.toTimestamptz())
                 .param("cron", notification.schedule.cron)
+                .param("pattern", notification.schedule.pattern)
                 .param("zone", notification.schedule.zone.id)
                 .param("until", notification.schedule.until?.toTimestamptz())
                 .param("status", notification.status.name)
@@ -149,6 +150,7 @@ class PostgresNotificationStore(
             zone = ZoneId.of(getString("zone")),
             runAt = getInstant("run_at"),
             cron = getString("cron"),
+            pattern = getString("pattern"),
             until = getInstant("until"),
         ),
         status = NotificationStatus.valueOf(getString("status")),

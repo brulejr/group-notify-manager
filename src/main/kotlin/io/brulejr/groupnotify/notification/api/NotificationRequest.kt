@@ -31,13 +31,17 @@ data class NotificationRequest(
     val deliveries: List<DeliveryRequest> = emptyList(),
     val paused: Boolean = false,
 ) {
-    /** `{"kind": "ONCE", "at": "2026-12-01T18:00"}` or `{"kind": "RECURRING", "cron": "0 18 * * TUE"}`. */
+    /**
+     * `{"kind": "ONCE", "at": "2026-12-01T18:00"}`, `{"kind": "RECURRING", "cron": "0 18 * * TUE"}`
+     * or `{"kind": "PATTERN", "pattern": "every other month on the 3rd tuesday at 6pm"}`.
+     */
     data class ScheduleRequest(
         val kind: ScheduleKind = ScheduleKind.ONCE,
         val zone: String = "",
         val at: LocalDateTime? = null,
         val cron: String = "",
         val until: LocalDate? = null,
+        val pattern: String = "",
     )
 
     data class DeliveryRequest(
@@ -58,6 +62,7 @@ data class NotificationRequest(
         runAt = schedule.at,
         cron = schedule.cron,
         until = schedule.until,
+        pattern = schedule.pattern,
         deliveries = deliveries.map { NotificationDraft.Delivery(it.id, it.instance, it.overrides, it.enabled) },
         paused = paused,
     )

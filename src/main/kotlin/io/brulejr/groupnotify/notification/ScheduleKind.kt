@@ -14,4 +14,7 @@ enum class ScheduleKind(val label: String) {
 
     /** Sent every time a cron expression matches, until an optional end date. */
     RECURRING("Recurring"),
+
+    /** Sent as a pattern in words says, e.g. "every other month on the 3rd tuesday at 6pm"; see [SchedulePattern]. */
+    PATTERN("Pattern"),
 }

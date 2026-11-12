@@ -29,6 +29,7 @@ import io.brulejr.groupnotify.notification.NotificationProblem
 import io.brulejr.groupnotify.notification.NotificationResult
 import io.brulejr.groupnotify.notification.NotificationService
 import io.brulejr.groupnotify.notification.NotificationStatus
+import io.brulejr.groupnotify.notification.PatternParser
 import io.brulejr.groupnotify.notification.Schedule
 import io.brulejr.groupnotify.notification.ScheduleKind
 import io.brulejr.groupnotify.security.NotifyUser
@@ -182,11 +183,25 @@ class NotificationPageController(
         @RequestParam(defaultValue = "") cron: String,
         @RequestParam(defaultValue = "") zone: String,
         @RequestParam(defaultValue = "") until: String,
+        @RequestParam(defaultValue = "") pattern: String,
         model: Model,
     ): String {
         val zoneId = runCatching { ZoneId.of(zone.ifBlank { notifications.defaultZone.id }) }.getOrNull()
+        var description: String? = null
         val (runs, problem) = when {
             zoneId == null -> emptyList<java.time.Instant>() to "Choose a time zone."
+            kind == ScheduleKind.PATTERN -> when {
+                pattern.isBlank() -> emptyList<java.time.Instant>() to "Write a pattern, or pick an example."
+                else -> runCatching { PatternParser.parse(pattern, clock.instant().atZone(zoneId).toLocalDate()) }.fold(
+                    onSuccess = { parsed ->
+                        description = parsed.describe()
+                        val schedule = Schedule(ScheduleKind.PATTERN, zoneId, pattern = parsed.canonical())
+                        val upcoming = schedule.upcoming(clock.instant(), 5)
+                        upcoming to if (upcoming.isEmpty()) "It never runs before its end date." else null
+                    },
+                    onFailure = { emptyList<java.time.Instant>() to it.message },
+                )
+            }
             kind == ScheduleKind.ONCE -> {
                 val at = runCatching { LocalDateTime.parse(runAt).atZone(zoneId).toInstant() }.getOrNull()
                 when {
@@ -204,6 +219,7 @@ class NotificationPageController(
         }
         model.addAttribute("runs", runs.toMutableList())
         model.addAttribute("problem", problem)
+        model.addAttribute("description", description)
         model.addAttribute("zone", zoneId ?: notifications.defaultZone)
         return "ui/notifications/parts :: schedulePreview"
     }
@@ -333,6 +349,7 @@ class NotificationPageController(
         model.addAttribute("deliveries", badges(n).toMutableList())
         model.addAttribute("upcoming", (if (n.status == NotificationStatus.ACTIVE) n.schedule.upcoming(now, 5) else emptyList()).toMutableList())
         model.addAttribute("cronMeaning", n.schedule.cron?.let { CronSpec.EXAMPLES[it.trim()] })
+        model.addAttribute("patternMeaning", n.schedule.parsedPattern?.describe())
         model.addAttribute("history", audit.history(user, AuditQuery(notificationId = n.id, limit = 25)).toMutableList())
     }
 
@@ -352,6 +369,7 @@ class NotificationPageController(
         model.addAttribute("kinds", ScheduleKind.entries.toMutableList())
         model.addAttribute("zones", ZONES.toMutableList())
         model.addAttribute("cronExamples", LinkedHashMap(CronSpec.EXAMPLES))
+        model.addAttribute("patternExamples", LinkedHashMap(PatternParser.EXAMPLES))
         model.addAttribute("placeholders", LinkedHashMap(Placeholders.NAMES))
         model.addAttribute("isAdmin", user.admin)
     }

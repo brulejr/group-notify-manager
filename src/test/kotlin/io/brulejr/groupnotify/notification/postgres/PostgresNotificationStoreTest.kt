@@ -75,6 +75,16 @@ class PostgresNotificationStoreTest {
     }
 
     @Test
+    fun `a pattern schedule comes back as saved`() {
+        val n = notification().copy(
+            schedule = Schedule(ScheduleKind.PATTERN, ZoneId.of("America/New_York"), pattern = "every 2 months on the 3rd tuesday at 18:00 starting 2027-02-01"),
+        )
+        store.save(n)
+
+        assertEquals(n.schedule, store.find(n.id)!!.schedule)
+    }
+
+    @Test
     fun `lists are limited to the groups asked for`() {
         store.save(notification("notify_club"))
         store.save(notification("notify_family"))

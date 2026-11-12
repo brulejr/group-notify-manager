@@ -51,10 +51,21 @@ A **notification** belongs to one group and has a title (for the console), a sub
 and a body (for recipients), a body format (Markdown or HTML), a schedule, a status
 and one or more deliveries.
 
-A **schedule** is one-off (a local date-time in a zone) or recurring (a cron
-expression in a zone, with an optional last day). Cron is read in the zone, so
+A **schedule** is one-off (a local date-time in a zone), recurring (a cron
+expression in a zone, with an optional last day), or a **pattern** in words. Cron is read in the zone, so
 `0 18 * * TUE` stays at 18:00 local across daylight saving. Five-field cron is
 accepted and converted to Spring's six-field form; Spring's `L` and `TUE#2` work.
+
+A **pattern** (`SchedulePattern`, read by `PatternParser`) covers what cron cannot:
+intervals counted from a start date, so "every other week" or "every 3rd month from
+February". It is every N hours, days, weeks or months from its start; an hourly one from
+its time on the local clock (each run sent once across a daylight saving change); a weekly one on given
+weekdays, a monthly one on the nth (1st–5th) or last weekday or on day n, at a local
+time, until an optional last day. A month without the day is skipped. The parser is
+deterministic, built on `java.time` alone: the same words always mean the same, and
+words it does not know are named in the error. A pattern is stored as its canonical
+words, which always include the start (today when not said), so it reads back the
+same, and "every other" keeps counting from the same day, however often it is edited.
 
 **Status** is `ACTIVE`, `PAUSED` or `COMPLETED`. `nextRunAt` is set only while
 active. A one-off completes once sent; a recurring one when it passes its end date.
@@ -163,7 +174,7 @@ History is filtered by group exactly as notifications are.
 ## Storage
 
 PostgreSQL in its own schema (`group_notify`), migrated by Flyway on first use; or
-memory, for tests and trying it out. Tables: `notifications`, `deliveries` (cascade
+memory, for tests and trying it out. Tables: `notifications` (a pattern schedule in `pattern`, since V3), `deliveries` (cascade
 delete with their notification; a foreign key to `plugin_instances`, so an instance in
 use cannot be deleted), `plugin_instances` (configuration as `jsonb`, secret values
 sealed as `enc:v1:…`), `audit_events`.

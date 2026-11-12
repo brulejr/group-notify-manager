@@ -58,6 +58,7 @@ class ConsolePagesTest : WebTest() {
 
     private fun seed(kind: ScheduleKind = ScheduleKind.RECURRING, format: BodyFormat = BodyFormat.MARKDOWN): UUID {
         val draft = NotificationDraft(
+            pattern = "every other month on the 3rd tuesday at 6pm",
             group = "notify_club", title = "Net night", subject = "Net tonight at {{time}}",
             body = if (format == BodyFormat.HTML) "<p>Check in on <strong>146.52</strong></p>" else "Check in on **146.52**",
             format = format, kind = kind, zone = "America/New_York",
@@ -79,6 +80,7 @@ class ConsolePagesTest : WebTest() {
     fun `every page renders`() {
         val recurring = seed()
         val once = seed(ScheduleKind.ONCE, BodyFormat.HTML)
+        val pattern = seed(ScheduleKind.PATTERN)
         val pages = mapOf(
             "/ui" to "Coming up",
             "/ui/overview" to "Net night",
@@ -96,6 +98,10 @@ class ConsolePagesTest : WebTest() {
             "/ui/instances/list" to "Club log",
             "/ui/notifications/schedule-preview?kind=RECURRING&cron=0 9 * * MON&zone=America/New_York" to "Next runs",
             "/ui/notifications/schedule-preview?kind=RECURRING&cron=nonsense" to "not a valid cron",
+            "/ui/notifications/schedule-preview?kind=PATTERN&pattern=every other month on the 3rd tuesday at 6pm&zone=America/New_York" to "Every other month on the 3rd Tuesday at 6:00 PM",
+            "/ui/notifications/schedule-preview?kind=PATTERN&pattern=every fortnight" to "“every fortnight” is not understood",
+            "/ui/notifications/$pattern" to "Every other month on the 3rd Tuesday",
+            "/ui/notifications/$pattern/edit" to "every 2 months on the 3rd tuesday at 18:00 starting",
             "/ui/history" to "Created",
             "/ui/history/rows?type=changes" to "Net night",
             "/ui/history?notificationId=$recurring" to "Showing",

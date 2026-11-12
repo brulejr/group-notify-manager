@@ -18,6 +18,7 @@ import java.time.LocalDateTime
  * @property zone an IANA zone such as `America/New_York`; blank for the default.
  * @property runAt a one-off's time.
  * @property until a recurring schedule's last day, inclusive.
+ * @property pattern a [ScheduleKind.PATTERN] schedule in words; see [PatternParser].
  */
 data class NotificationDraft(
     val group: String,
@@ -30,6 +31,7 @@ data class NotificationDraft(
     val runAt: LocalDateTime? = null,
     val cron: String = "",
     val until: LocalDate? = null,
+    val pattern: String = "",
     val deliveries: List<Delivery> = emptyList(),
     val paused: Boolean = false,
 ) {

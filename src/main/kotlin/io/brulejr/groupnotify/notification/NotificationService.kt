@@ -214,6 +214,29 @@ class NotificationService(
                 }
             }
         }
+        // Stored as its canonical words, start included, so "every other" keeps counting
+        // from the same day however often it is edited.
+        ScheduleKind.PATTERN -> {
+            val text = draft.pattern.trim()
+            val pattern = if (text.isEmpty()) {
+                null.also { problem("pattern", "Write a pattern, e.g. “every week on tuesday at 6pm”.") }
+            } else {
+                runCatching { PatternParser.parse(text, now.atZone(zone).toLocalDate()) }
+                    .onFailure { problem("pattern", it.message ?: "is not understood") }
+                    .getOrNull()
+            }
+            pattern?.let {
+                val schedule = Schedule(
+                    ScheduleKind.PATTERN, zone, pattern = it.canonical(),
+                    until = it.until?.atTime(LocalTime.MAX)?.atZone(zone)?.toInstant(),
+                )
+                when {
+                    it.until != null && schedule.until!! <= now -> null.also { problem("pattern", "Its end date has passed.") }
+                    schedule.nextAfter(now) == null -> null.also { problem("pattern", "It never runs before its end date.") }
+                    else -> schedule
+                }
+            }
+        }
     }
 
     /**

@@ -36,6 +36,7 @@ data class NotificationForm(
     val runAt: String = "",
     val cron: String = "",
     val until: String = "",
+    val pattern: String = "",
     val paused: Boolean = false,
     val deliveries: List<Delivery> = emptyList(),
 ) {
@@ -59,6 +60,7 @@ data class NotificationForm(
         val draft = NotificationDraft(
             group = group, title = title, subject = subject, body = body, format = format, kind = kind, zone = zone,
             runAt = parsedRunAt, cron = if (kind == ScheduleKind.RECURRING) cron else "", until = parsedUntil,
+            pattern = if (kind == ScheduleKind.PATTERN) pattern else "",
             deliveries = deliveries.map { NotificationDraft.Delivery(it.id.ifBlank { null }, it.instance, it.overrides, it.enabled) },
             paused = paused,
         )
@@ -89,6 +91,7 @@ data class NotificationForm(
                 runAt = one("runAt"),
                 cron = one("cron"),
                 until = one("until"),
+                pattern = one("pattern"),
                 paused = params["paused"]?.lastOrNull() == "true",
                 deliveries = rows.values.filter { !it["instance"].isNullOrBlank() }.map { row ->
                     Delivery(
@@ -112,7 +115,9 @@ data class NotificationForm(
             zone = n.schedule.zone.id,
             runAt = n.schedule.runAt?.atZone(n.schedule.zone)?.format(LOCAL).orEmpty(),
             cron = n.schedule.cron.orEmpty(),
-            until = n.schedule.until?.atZone(n.schedule.zone)?.toLocalDate()?.toString().orEmpty(),
+            // A pattern's end is part of its words.
+            until = n.schedule.until?.takeIf { n.schedule.kind == ScheduleKind.RECURRING }?.atZone(n.schedule.zone)?.toLocalDate()?.toString().orEmpty(),
+            pattern = n.schedule.pattern.orEmpty(),
             deliveries = n.deliveries.map { Delivery(it.id.toString(), it.instance.toString(), it.enabled, it.overrides) },
         )
 

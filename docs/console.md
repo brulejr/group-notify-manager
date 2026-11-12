@@ -22,8 +22,18 @@ without internet.
   **Rich text** (Quill). Switching converts what is there; going from rich text to
   Markdown loses colours and alignment. **Preview** shows the body exactly as each kind
   of delivery receives it: sanitised HTML, the Markdown Discord gets, and plain text.
-- **Schedule**: one-off at a date and time, or recurring by cron with an optional last
-  day, in a time zone. The next runs appear as you type.
+- **Schedule**: one-off at a date and time; recurring by cron with an optional last
+  day; or a **pattern** in words, in a time zone. The next runs appear as you type, and
+  a pattern is said back in plain English. A pattern is:
+  - `every [other | N] hour | day | week | month`, or `every [other] tuesday`;
+  - then `on tuesday, thursday`, `on the 3rd tuesday` (1st–5th or last) or `on day 15`;
+  - `at 6pm` (or `18:00`, `noon`); for hours, the time it counts from, midnight unless
+    said, so `every 2 hours at 8am` runs at 8, 10, 12…;
+  - optionally `starting 2027-02-01` and `until December 31, 2027`.
+
+  For example `every other month on the 3rd tuesday at 6pm`. "Every other" counts from
+  the start, today unless you say; a month without the day (a 5th Tuesday, a 31st) is
+  skipped. Words it does not know are named, not guessed.
 - **Deliveries**: **Add delivery** lists the group's delivery instances; pick one or
   more. Each shows the settings this notification may change, with the instance's
   defaults filled in, and *Set for this notification* against any you changed. The

@@ -265,7 +265,11 @@ time.just-now { color: #16a34a; font-weight: 600; }
 
 /* Only the inputs of the chosen schedule kind show. */
 .notification-form:has(#kind-ONCE:checked) .schedule-recurring,
-.notification-form:has(#kind-RECURRING:checked) .schedule-once { display: none; }
+.notification-form:has(#kind-ONCE:checked) .schedule-pattern,
+.notification-form:has(#kind-RECURRING:checked) .schedule-once,
+.notification-form:has(#kind-RECURRING:checked) .schedule-pattern,
+.notification-form:has(#kind-PATTERN:checked) .schedule-once,
+.notification-form:has(#kind-PATTERN:checked) .schedule-recurring { display: none; }
 
 .delivery-list { display: flex; flex-direction: column; gap: 1rem; }
 .delivery-list:not(:empty) + .delivery-empty { display: none; }

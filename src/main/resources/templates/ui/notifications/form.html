@@ -82,7 +82,7 @@
               <th:block th:each="k : ${kinds}">
                 <input type="radio" class="btn-check" name="kind" th:id="'kind-' + ${k}" th:value="${k}" th:checked="${k == form.kind}" autocomplete="off">
                 <label class="btn btn-outline-primary" th:for="'kind-' + ${k}">
-                  <i class="bi me-1" th:classappend="${k.name() == 'ONCE'} ? 'bi-1-circle' : 'bi-arrow-repeat'"></i><span th:text="${k.label}">One-off</span></label>
+                  <i class="bi me-1" th:classappend="${k.name() == 'ONCE'} ? 'bi-1-circle' : (${k.name() == 'PATTERN'} ? 'bi-chat-left-text' : 'bi-arrow-repeat')"></i><span th:text="${k.label}">One-off</span></label>
               </th:block>
             </div>
             <div class="row g-3">
@@ -100,6 +100,18 @@
                 <div class="invalid-feedback" th:text="${errors.get('cron')}"></div>
                 <div class="form-text">Five fields, e.g. <code>0 18 * * TUE</code> for Tuesdays at 18:00; <code>TUE#2</code> is the second Tuesday, <code>L</code> the last day.</div>
               </div>
+              <div class="col-md-9 schedule-pattern">
+                <label class="form-label fw-semibold" for="pattern">Pattern</label>
+                <input class="form-control" id="pattern" name="pattern" th:value="${form.pattern}" list="pattern-examples"
+                       placeholder="e.g. every other month on the 3rd tuesday at 6pm" autocomplete="off"
+                       th:classappend="${errors.containsKey('pattern')} ? 'is-invalid'">
+                <datalist id="pattern-examples"><option th:each="e : ${patternExamples}" th:value="${e.key}" th:text="${e.value}"></option></datalist>
+                <div class="invalid-feedback" th:text="${errors.get('pattern')}"></div>
+                <div class="form-text">
+                  <code>every [other | N] hour/day/week/month</code>, then <code>on tuesday, thursday</code>, <code>on the 3rd tuesday</code>
+                  (1st–5th or last) or <code>on day 15</code>; <code>at 6pm</code>; optionally <code>starting 2027-02-01</code> and
+                  <code>until 2027-12-31</code>. "Every other" counts from the start, today unless you say. For hours, <code>at</code> is when it counts from (midnight unless you say).</div>
+              </div>
               <div class="col-md-3 schedule-recurring">
                 <label class="form-label fw-semibold" for="until">Until</label>
                 <input class="form-control" type="date" id="until" name="until" th:value="${form.until}"
@@ -116,7 +128,7 @@
               </div>
             </div>
             <div id="schedule-preview" class="mt-3" th:hx-get="@{/ui/notifications/schedule-preview}"
-                 hx-trigger="load, change from:#schedule-inputs, keyup changed delay:400ms from:#cron"
+                 hx-trigger="load, change from:#schedule-inputs, keyup changed delay:400ms from:#cron, keyup changed delay:400ms from:#pattern"
                  hx-include="#schedule-inputs" hx-target="this" hx-swap="innerHTML"></div>
           </div>
         </div>

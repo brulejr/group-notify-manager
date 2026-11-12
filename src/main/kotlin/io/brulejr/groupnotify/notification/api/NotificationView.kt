@@ -39,7 +39,19 @@ data class NotificationView(
     val updatedBy: String,
     val updatedAt: Instant,
 ) {
-    data class ScheduleView(val kind: ScheduleKind, val zone: String, val at: LocalDateTime?, val cron: String?, val until: Instant?)
+    /**
+     * @property pattern a pattern's canonical words, which always give its start.
+     * @property description a pattern in plain English.
+     */
+    data class ScheduleView(
+        val kind: ScheduleKind,
+        val zone: String,
+        val at: LocalDateTime?,
+        val cron: String?,
+        val until: Instant?,
+        val pattern: String? = null,
+        val description: String? = null,
+    )
 
     /**
      * @property instanceName null when the instance has since been deleted.
@@ -66,6 +78,7 @@ data class NotificationView(
             schedule = ScheduleView(
                 n.schedule.kind, n.schedule.zone.id,
                 n.schedule.runAt?.atZone(n.schedule.zone)?.toLocalDateTime(), n.schedule.cron, n.schedule.until,
+                n.schedule.pattern, n.schedule.parsedPattern?.describe(),
             ),
             status = n.status,
             nextRunAt = n.nextRunAt,

@@ -110,6 +110,31 @@ class NotificationServiceTest {
     }
 
     @Test
+    fun `a pattern is stored in its canonical words, its start fixed at the day it was written`() {
+        // The test clock stands at Tuesday 10 November 2026.
+        val n = created(f.draft(kind = ScheduleKind.PATTERN, runAt = null).copy(pattern = "every other tuesday at 6pm"))
+
+        assertEquals("every 2 weeks on tuesday at 18:00 starting 2026-11-10", n.schedule.pattern)
+        assertEquals(Instant.parse("2026-11-10T23:00:00Z"), n.nextRunAt)
+
+        // A week later, saving it again keeps it counting from the 10th, not from today.
+        f.clock.advance(Duration.ofDays(7))
+        val edited = assertIs<NotificationResult.Saved>(
+            service.update(n.id, f.draft(kind = ScheduleKind.PATTERN, runAt = null).copy(title = "Renamed", pattern = n.schedule.pattern!!), alice),
+        ).notification
+        assertEquals(Instant.parse("2026-11-24T23:00:00Z"), edited.nextRunAt)
+    }
+
+    @Test
+    fun `a pattern that cannot be read, or has ended, is refused against its field`() {
+        val draft = f.draft(kind = ScheduleKind.PATTERN, runAt = null)
+
+        assertEquals("Say what time, e.g. “at 6pm”.", problems(service.create(draft.copy(pattern = "every week on tuesday"), alice))["pattern"])
+        assertEquals("Its end date has passed.", problems(service.create(draft.copy(pattern = "every day at 9am starting 2026-01-01 until 2026-02-01"), alice))["pattern"])
+        assertTrue(problems(service.create(draft, alice)).containsKey("pattern"))
+    }
+
+    @Test
     fun `a reader may see but not change`() {
         val n = created()
 

@@ -90,7 +90,11 @@
               <th:block th:if="${n.schedule.kind.name() == 'ONCE'}">
                 <dt>At</dt><dd th:text="${#temporals.format(n.schedule.runAt.atZone(n.schedule.zone), 'EEEE d MMMM yyyy, h:mm a z')}">time</dd>
               </th:block>
-              <th:block th:unless="${n.schedule.kind.name() == 'ONCE'}">
+              <th:block th:if="${n.schedule.kind.name() == 'PATTERN'}">
+                <dt>Pattern</dt><dd><span th:text="${patternMeaning}">Every other month…</span>
+                  <div class="small text-body-secondary mono" th:text="${n.schedule.pattern}">every 2 months …</div></dd>
+              </th:block>
+              <th:block th:if="${n.schedule.kind.name() == 'RECURRING'}">
                 <dt>Cron</dt><dd><span class="mono" th:text="${n.schedule.cron}">cron</span>
                   <div class="small text-body-secondary" th:if="${cronMeaning != null}" th:text="${cronMeaning}"></div></dd>
                 <dt>Until</dt><dd th:text="${n.schedule.until != null} ? ${#temporals.format(n.schedule.until.atZone(n.schedule.zone), 'd MMMM yyyy')} : 'no end date'">until</dd>

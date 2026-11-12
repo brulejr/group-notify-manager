@@ -58,6 +58,7 @@
 
 <!--/* The next few runs of the schedule as typed. */-->
 <div th:fragment="schedulePreview" class="schedule-preview">
+  <div class="small fw-semibold mb-2" th:if="${description != null}"><i class="bi bi-chat-left-text me-1"></i><span th:text="${description}">Every other month…</span></div>
   <div class="text-body-secondary small" th:if="${problem != null}"><i class="bi bi-info-circle me-1"></i><span th:text="${problem}">problem</span></div>
   <th:block th:if="${!runs.isEmpty()}">
     <div class="small fw-semibold mb-1" th:text="${runs.size() == 1} ? 'Sent' : 'Next runs'">Next runs</div>

@@ -132,6 +132,19 @@ class NotificationApiTest : WebTest() {
     }
 
     @Test
+    fun `a pattern schedule comes back in canonical words and plain English`() {
+        val pattern = body().replace(
+            """{"kind": "RECURRING", "cron": "0 9 * * SAT", "zone": "America/New_York"}""",
+            """{"kind": "PATTERN", "pattern": "every month on the last saturday at 9am", "zone": "America/New_York"}""",
+        )
+
+        mvc.perform(post("/api/notifications").alice().contentType(MediaType.APPLICATION_JSON).content(pattern))
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.schedule.pattern").value(org.hamcrest.Matchers.startsWith("every month on the last saturday at 09:00 starting ")))
+            .andExpect(jsonPath("$.schedule.description").value(org.hamcrest.Matchers.startsWith("Every month on the last Saturday at 9:00 AM")))
+    }
+
+    @Test
     fun `a refused notification says what is wrong with each field`() {
         mvc.perform(post("/api/notifications").bob().contentType(MediaType.APPLICATION_JSON).content(body()))
             .andExpect(status().isBadRequest)

@@ -7,7 +7,9 @@
 #
 # The application has no login of its own: it trusts the Remote-* headers Traefik copies
 # from Authelia. It is published on loopback only (APP_BIND_IP) and reached by Traefik
-# over the Docker network, so its port cannot skip Authelia.
+# over the shared Docker network (DOCKER_NETWORK, default homelab, which must already
+# exist) as http://group-notify-manager:5002, so its port cannot skip Authelia.
+# PostgreSQL stays on the stack's own network.
 name: group-notify-manager
 
 services:
@@ -16,6 +18,8 @@ services:
       context: ../..
       dockerfile: docker/Dockerfile
     image: group-notify-manager:${APP_VERSION:-latest}
+    # The name Traefik's route reaches it by: backend_url http://group-notify-manager:5002.
+    container_name: ${APP_CONTAINER_NAME:-group-notify-manager}
     depends_on:
       postgres:
         condition: service_healthy
@@ -41,6 +45,9 @@ services:
       - "${APP_BIND_IP:-127.0.0.1}:${APP_PORT:-5002}:5002"
     volumes:
       - ${PLUGINS_DIR:-../../plugins-dir}:/app/plugins:ro,z
+    networks:
+      - default
+      - edge
     restart: unless-stopped
 
   postgres:
@@ -65,3 +72,9 @@ services:
 
 volumes:
   postgres-data:
+
+networks:
+  # Traefik's network, shared with the other homelab apps; created outside this stack.
+  edge:
+    name: ${DOCKER_NETWORK:-homelab}
+    external: true

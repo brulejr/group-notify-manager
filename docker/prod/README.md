@@ -15,14 +15,17 @@ believes the `Remote-User`, `Remote-Groups`, `Remote-Name` and `Remote-Email` he
 So it must only be reachable through Traefik:
 
 - publish it on loopback (`APP_BIND_IP=127.0.0.1`, the default) and route Traefik to
-  the container over the shared Docker network, as iot-pipeline is;
+  the container over the shared Docker network, as iot-pipeline is. The app joins
+  `DOCKER_NETWORK` (default `homelab`, which must already exist) as
+  `group-notify-manager` (`APP_CONTAINER_NAME`); PostgreSQL stays on the stack's own
+  network;
 - add it to `edge_apps` with `sso`, which turns into an Authelia access rule, e.g.
 
   ```yaml
   - name: notify
     namespace: "homelab"
     fqdn: "notify.brulenet.dev"
-    backend_url: "http://group-notify-manager-app-1:5002"
+    backend_url: "http://group-notify-manager:5002"
     sso:
       groups: [homelab_admins, homelab_users]
   ```
@@ -46,6 +49,8 @@ notifications each person sees. See [docs/security.md](../../docs/security.md).
 | `NOTIFY_SECRET_KEY` | yes | Encrypts delivery instances' secrets: 32 bytes in base64 (`openssl rand -base64 32`). Back it up; without it, stored secrets must be re-entered |
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`, `MAIL_FROM_NAME` | | An SMTP server, only for an external plugin that sends mail |
 | `PLUGINS_DIR` | | A host directory of extra plugin jars; default `plugins-dir/` in the checkout |
+| `DOCKER_NETWORK` | | Traefik's shared network, joined by the app; default `homelab` |
+| `APP_CONTAINER_NAME` | | The name Traefik reaches it by; default `group-notify-manager` |
 
 Any other setting can be given by its full property name in upper case, e.g.
 `NOTIFY_DISPATCH_MISFIRE_GRACE=2h`.

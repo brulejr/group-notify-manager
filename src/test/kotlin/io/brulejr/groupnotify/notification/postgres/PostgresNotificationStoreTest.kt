@@ -8,6 +8,8 @@
  */
 package io.brulejr.groupnotify.notification.postgres
 
+import io.brulejr.groupnotify.instance.PluginInstance
+import io.brulejr.groupnotify.instance.postgres.PostgresInstanceStore
 import io.brulejr.groupnotify.notification.BodyFormat
 import io.brulejr.groupnotify.notification.Notification
 import io.brulejr.groupnotify.notification.NotificationDelivery
@@ -31,22 +33,36 @@ import kotlin.test.assertTrue
 @Testcontainers(disabledWithoutDocker = true)
 class PostgresNotificationStoreTest {
 
-    private val store = PostgresNotificationStore(PostgresTestDatabase.jdbc, PostgresTestDatabase.transactions, JsonMapper.builder().build())
+    private val json = JsonMapper.builder().build()
+    private val store = PostgresNotificationStore(PostgresTestDatabase.jdbc, PostgresTestDatabase.transactions, json)
+    private val instances = PostgresInstanceStore(PostgresTestDatabase.jdbc, json)
     private val now = Instant.now().truncatedTo(ChronoUnit.MICROS)
+
+    // A delivery's instance is a foreign key, so both must exist first.
+    private lateinit var discord: PluginInstance
+    private lateinit var groupsio: PluginInstance
+
+    private fun instance(plugin: String, name: String) = PluginInstance(
+        UUID.randomUUID(), "notify_club", plugin, name, mapOf("k" to "v"), "root", now, "root", now,
+    ).also(instances::save)
 
     private fun notification(group: String = "notify_club", next: Instant? = now.minusSeconds(5)) = Notification(
         id = UUID.randomUUID(), group = group, title = "t", subject = "s", body = "**b**", format = BodyFormat.MARKDOWN,
         schedule = Schedule(ScheduleKind.RECURRING, ZoneId.of("America/New_York"), cron = "0 9 * * *"),
         status = NotificationStatus.ACTIVE,
         deliveries = listOf(
-            NotificationDelivery(UUID.randomUUID(), "discord", mapOf("webhookUrl" to "https://x/y"), "Members"),
-            NotificationDelivery(UUID.randomUUID(), "groupsio", mapOf("group" to "myclub"), enabled = false),
+            NotificationDelivery(UUID.randomUUID(), discord.id, mapOf("mention" to "@here")),
+            NotificationDelivery(UUID.randomUUID(), groupsio.id, enabled = false),
         ),
         nextRunAt = next, lastRunAt = null, createdBy = "alice", createdAt = now, updatedBy = "alice", updatedAt = now,
     )
 
     @BeforeEach
-    fun reset() = PostgresTestDatabase.reset()
+    fun reset() {
+        PostgresTestDatabase.reset()
+        discord = instance("discord", "Club Discord")
+        groupsio = instance("groupsio", "Club list")
+    }
 
     @Test
     fun `a notification and its deliveries come back as saved, in order`() {
@@ -55,7 +71,7 @@ class PostgresNotificationStoreTest {
 
         assertEquals(n, store.find(n.id))
         store.save(n.copy(title = "renamed", deliveries = n.deliveries.reversed()))
-        assertEquals(listOf("groupsio", "discord"), store.find(n.id)!!.deliveries.map { it.plugin })
+        assertEquals(listOf(groupsio.id, discord.id), store.find(n.id)!!.deliveries.map { it.instance })
     }
 
     @Test

@@ -3,16 +3,15 @@
        schedule's next runs, and the body preview. Never rendered as a page. */-->
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
-<!--/* One delivery: which plugin, and an input for each field it asks for. */-->
+<!--/* One delivery: the instance it goes through, and its overridable fields. */-->
 <div th:fragment="delivery" class="card delivery-card" th:with="i=${row.index}, p=${row.plugin}">
-  <input type="hidden" th:name="'deliveries[' + ${i} + '].plugin'" th:value="${p.id}">
+  <input type="hidden" th:name="'deliveries[' + ${i} + '].instance'" th:value="${row.instance}">
   <input type="hidden" th:name="'deliveries[' + ${i} + '].id'" th:value="${row.id}">
   <div class="card-header delivery-header">
-    <i class="bi plugin-icon" th:classappend="'bi-' + ${p.icon}"></i>
-    <span class="fw-semibold" th:text="${p.name}">Discord</span>
-    <span class="badge text-bg-warning" th:unless="${p.ready}" th:title="${p.reason}"><i class="bi bi-exclamation-triangle me-1"></i>not ready</span>
-    <input class="form-control form-control-sm delivery-label" th:name="'deliveries[' + ${i} + '].label'" th:value="${row.label}"
-           placeholder="Label (optional)" aria-label="Label" maxlength="100">
+    <i class="bi plugin-icon" th:classappend="'bi-' + ${p != null ? p.icon : 'question-circle'}"></i>
+    <span class="fw-semibold" th:text="${row.name}">Club announcements</span>
+    <span class="small text-body-secondary text-truncate" th:text="${(p != null ? p.name + ' · ' : '') + row.summary}">groups.io · brulenet</span>
+    <span class="badge text-bg-warning" th:if="${p != null and !p.ready}" th:title="${p.reason}"><i class="bi bi-exclamation-triangle me-1"></i>not ready</span>
     <div class="form-check form-switch mb-0 ms-auto" title="A disabled delivery is kept but not sent">
       <input type="hidden" th:name="'deliveries[' + ${i} + '].enabled'" value="false">
       <input class="form-check-input" type="checkbox" role="switch" th:id="'d' + ${i} + '-enabled'" th:name="'deliveries[' + ${i} + '].enabled'"
@@ -23,42 +22,39 @@
   </div>
   <div class="card-body">
     <div class="alert alert-danger py-2 small" th:if="${row.error != null}" th:text="${row.error}">error</div>
-    <p class="small text-body-secondary" th:text="${p.description}">description</p>
-    <div class="row g-3">
-      <div th:each="in : ${row.inputs}" th:with="f=${in.field}"
-           th:class="${f.type.name() == 'TEXTAREA' or f.type.name() == 'URL' or f.type.name() == 'EMAIL' or f.type.name() == 'PHONE'} ? 'col-12' : 'col-md-6'">
-        <th:block th:if="${f.type.name() == 'CHECKBOX'}">
-          <div class="form-check mt-md-4">
-            <input type="hidden" th:name="${in.name}" value="false">
-            <input class="form-check-input" type="checkbox" th:id="${in.inputId}" th:name="${in.name}" value="true"
-                   th:checked="${in.value == 'true'}" th:classappend="${in.error != null} ? 'is-invalid'">
-            <label class="form-check-label" th:for="${in.inputId}" th:text="${f.label}">label</label>
-            <div class="invalid-feedback" th:text="${in.error}"></div>
-          </div>
-        </th:block>
-        <th:block th:unless="${f.type.name() == 'CHECKBOX'}">
-          <label class="form-label fw-semibold" th:for="${in.inputId}">
-            <span th:text="${f.label}">label</span><span class="text-danger" th:if="${f.required}" title="required"> *</span>
-            <i class="bi bi-lock ms-1 text-body-secondary small" th:if="${f.secret}" title="Kept secret: never shown again once saved"></i></label>
-          <select th:if="${f.type.name() == 'SELECT'}" class="form-select" th:id="${in.inputId}" th:name="${in.name}"
-                  th:classappend="${in.error != null} ? 'is-invalid'">
-            <option th:each="o : ${f.options}" th:value="${o.value}" th:text="${o.label}" th:selected="${o.value == in.value}">option</option>
-          </select>
-          <textarea th:if="${f.type.name() == 'TEXTAREA'}" class="form-control" rows="3" th:id="${in.inputId}" th:name="${in.name}"
-                    th:placeholder="${f.placeholder}" th:text="${in.value}" th:classappend="${in.error != null} ? 'is-invalid'"></textarea>
-          <input th:if="${f.type.name() != 'SELECT' and f.type.name() != 'TEXTAREA'}" class="form-control" th:id="${in.inputId}" th:name="${in.name}"
-                 th:type="${f.secret} ? 'password' : (${f.type.name() == 'NUMBER'} ? 'number' : (${f.type.name() == 'URL'} ? 'url' : 'text'))"
-                 th:value="${in.value}" autocomplete="off"
-                 th:placeholder="${in.saved} ? 'Saved — leave blank to keep it' : ${f.placeholder}"
-                 th:classappend="${in.error != null} ? 'is-invalid'"
-                 th:attr="inputmode=${f.type.name() == 'PHONE'} ? 'tel' : (${f.type.name() == 'EMAIL'} ? 'email' : null)">
-          <div class="invalid-feedback" th:text="${in.error}"></div>
-          <div class="form-text" th:if="${!#strings.isEmpty(f.help)}" th:text="${f.help}">help</div>
-        </th:block>
+    <p class="small text-body-secondary mb-0" th:if="${row.inputs.isEmpty()}">Sent with the instance's own settings.</p>
+    <th:block th:unless="${row.inputs.isEmpty()}">
+      <p class="small text-body-secondary">The instance's defaults are filled in; change any for this notification only.</p>
+      <div class="row g-3">
+        <th:block th:each="in : ${row.inputs}"><div th:replace="~{ui/plugins/fields :: field(${in})}"></div></th:block>
       </div>
-    </div>
+    </th:block>
   </div>
 </div>
+
+<!--/* The Add delivery menu: the instances of the form's group. */-->
+<th:block th:fragment="instanceMenu">
+  <div class="dropdown" th:unless="${instances.isEmpty()}">
+    <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+      <i class="bi bi-plus-lg me-1"></i>Add delivery</button>
+    <ul class="dropdown-menu dropdown-menu-end">
+      <li th:each="c : ${instances}">
+        <button type="button" class="dropdown-item d-flex align-items-center gap-2" th:hx-get="@{/ui/notifications/delivery}"
+                th:attr="hx-vals='js:{instance: &quot;' + ${c.id} + '&quot;, index: notifyNextIndex()}'"
+                hx-target="#delivery-list" hx-swap="beforeend">
+          <i class="bi" th:classappend="'bi-' + ${c.icon}"></i>
+          <span><span class="fw-medium" th:text="${c.name}">Club announcements</span>
+            <span class="d-block small text-body-secondary" th:text="${c.pluginName} + ' · ' + ${c.summary}">groups.io · brulenet</span></span></button>
+      </li>
+    </ul>
+  </div>
+  <span class="small text-body-secondary" th:if="${instances.isEmpty()}">
+    <th:block th:if="${#strings.isEmpty(menuGroup)}">Choose a group first.</th:block>
+    <th:block th:unless="${#strings.isEmpty(menuGroup)}">This group has no delivery instances yet.
+      <a th:if="${canProvision}" th:href="@{/ui/instances/new(group=${menuGroup})}" hx-boost="false" target="_blank" rel="noopener">Set one up</a>
+      <th:block th:unless="${canProvision}">An admin sets them up.</th:block></th:block>
+  </span>
+</th:block>
 
 <!--/* The next few runs of the schedule as typed. */-->
 <div th:fragment="schedulePreview" class="schedule-preview">

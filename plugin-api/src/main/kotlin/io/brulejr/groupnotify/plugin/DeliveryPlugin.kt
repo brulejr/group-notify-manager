@@ -18,12 +18,15 @@ package io.brulejr.groupnotify.plugin
  * no-argument constructor.
  *
  * A plugin is told two kinds of configuration apart:
- * - **settings**, fixed per installation and kept out of the database: API keys, a
- *   sending number, a gateway address. They come from `notify.delivery.settings.<id>.*`
- *   and reach the plugin once, through [start].
- * - **a target**, one per delivery of a notification: which channel, which numbers,
- *   which list. The console builds the form for it from [fields], and the application
- *   stores it with the notification.
+ * - **settings**, fixed per installation: policy such as timeouts or which hosts may be
+ *   called. They come from `notify.delivery.settings.<id>.*` and reach the plugin once,
+ *   through [start]. Not credentials: those belong to an instance.
+ * - **an instance**: the plugin provisioned by an admin for one group under a name,
+ *   such as "Club announcements", holding every one of [fields]: the credentials and
+ *   where it sends, and defaults for the [PluginField.overridable] ones. A notification
+ *   chooses instances of its group and may override those defaults. What reaches
+ *   [deliver] is the result, the instance's values with the notification's overrides,
+ *   as a [DeliveryTarget]. The console builds the instance's form from [fields].
  *
  * Calls to [deliver] may come from several threads at once.
  */
@@ -44,14 +47,14 @@ interface DeliveryPlugin {
     /** A Bootstrap Icons name, without the `bi-` prefix, e.g. `discord`. */
     val icon: String get() = "send"
 
-    /** What one delivery needs to say, in the order the console shows them. */
+    /** What an instance is configured with, in the order the console shows them. */
     val fields: List<PluginField>
 
     /**
      * Called once, before any delivery, with this installation's settings and the
-     * services the application lends plugins. A plugin that is missing a setting should
-     * remember why and report it from [status] rather than throw: an unconfigured plugin
-     * must not stop the application from starting.
+     * services the application lends plugins. A plugin that cannot work should
+     * remember why and report it from [status] rather than throw: it must not stop the
+     * application from starting.
      */
     fun start(context: PluginContext) {}
 
@@ -59,8 +62,9 @@ interface DeliveryPlugin {
     fun status(): PluginStatus = PluginStatus.ready()
 
     /**
-     * Problems with a target beyond those the application checks itself, which are
-     * required fields and the options of a [FieldType.SELECT]. Keyed by field key.
+     * Problems with a target, an instance's values with any overrides, beyond those the
+     * application checks itself, which are required fields, numbers, URLs and the
+     * options of a [FieldType.SELECT]. Keyed by field key.
      */
     fun validate(target: DeliveryTarget): List<FieldProblem> = emptyList()
 

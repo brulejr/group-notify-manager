@@ -124,18 +124,10 @@
         <!--/* ---- deliveries ---- */-->
         <div class="card mb-4">
           <div class="card-header"><i class="bi bi-send"></i>Deliveries
-            <div class="dropdown ms-auto">
-              <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-plus-lg me-1"></i>Add delivery</button>
-              <ul class="dropdown-menu dropdown-menu-end">
-                <li th:each="p : ${plugins}">
-                  <button type="button" class="dropdown-item d-flex align-items-center gap-2" th:hx-get="@{/ui/notifications/delivery}"
-                          th:attr="hx-vals='js:{plugin: &quot;' + ${p.id} + '&quot;, index: notifyNextIndex()}'"
-                          hx-target="#delivery-list" hx-swap="beforeend">
-                    <i class="bi" th:classappend="'bi-' + ${p.icon}"></i><span th:text="${p.name}">Discord</span>
-                    <span class="badge text-bg-warning ms-auto" th:unless="${p.ready}" th:title="${p.reason}">not ready</span></button>
-                </li>
-              </ul>
+            <!--/* The group's instances; fetched again when the group changes. */-->
+            <div id="instance-menu" class="ms-auto" th:hx-get="@{/ui/notifications/instances}" hx-trigger="change from:#group"
+                 hx-include="#group" hx-target="this" hx-swap="innerHTML" hx-disinherit="*">
+              <div th:replace="~{ui/notifications/parts :: instanceMenu}"></div>
             </div>
           </div>
           <div class="card-body">
@@ -143,7 +135,9 @@
             <div id="delivery-list" class="delivery-list">
               <th:block th:each="row : ${rows}"><div th:replace="~{ui/notifications/parts :: delivery}"></div></th:block>
             </div>
-            <p class="text-body-secondary small mb-0 delivery-empty">One notification can go out several ways at once: a Discord channel, a groups.io list and a few phones, say.</p>
+            <p class="text-body-secondary small mb-0 delivery-empty">A notification goes out through its group's delivery instances, a groups.io list and
+              a Discord channel say, which an admin sets up under Delivery plugins. Choose one or more; some let this notification
+              change how it posts.</p>
           </div>
         </div>
       </div>

@@ -12,7 +12,7 @@ without internet.
 | A notification | The message as it will be sent, its schedule and next runs, its deliveries (each with a Test button), its history |
 | History | Every change and delivery in your groups; filter by group and kind, load older |
 | Groups | Your groups, with counts; start a notification in one |
-| Delivery plugins | Each plugin, whether it is ready and why not, what a delivery asks for. Admins also see where it came from and which settings are set |
+| Delivery plugins | Your groups' delivery instances, and each plugin, whether it is ready and what an instance is set up with. Admins create, edit and delete instances here, and see where each plugin came from |
 
 ## Writing a notification
 
@@ -24,9 +24,11 @@ without internet.
   of delivery receives it: sanitised HTML, the Markdown Discord gets, and plain text.
 - **Schedule**: one-off at a date and time, or recurring by cron with an optional last
   day, in a time zone. The next runs appear as you type.
-- **Deliveries**: **Add delivery** and pick a plugin; its fields appear. A label is
-  optional; the switch disables a delivery without removing it. A secret field, such
-  as a webhook URL, shows *Saved — leave blank to keep it* once stored.
+- **Deliveries**: **Add delivery** lists the group's delivery instances; pick one or
+  more. Each shows the settings this notification may change, with the instance's
+  defaults filled in, and *Set for this notification* against any you changed. The
+  switch disables a delivery without removing it. Credentials are not here: they are on
+  the instance. A group with no instances says so; an admin sets them up.
 - New notifications can **start paused**.
 
 A refused form is redrawn with each problem against its input.
@@ -36,3 +38,12 @@ A refused form is redrawn with each problem against its input.
 **Send now** sends through every enabled delivery and does not move the schedule.
 **Test** on a delivery sends through that one only. Both are recorded in the history
 with a hand icon and your name.
+
+## Setting up a delivery instance
+
+Admins only, from **Delivery plugins**: **New instance** on a plugin or a group, then
+the group (fixed once created), a name its authors will recognise, and the plugin's
+fields: credentials (encrypted, and shown afterwards only as *Saved — leave blank to
+keep it*), where it sends, and the defaults its notifications start with, marked *A
+default: a notification may change it*. An instance a notification still uses cannot
+be deleted; the console names the notifications.

@@ -17,8 +17,9 @@ import java.time.LocalDateTime
 /**
  * A notification as the REST API takes it. Times are local to the schedule's zone.
  *
- * A delivery's secret fields may be left out, or sent back as `********`, to keep what
- * is stored, provided the delivery carries the `id` it was given.
+ * A delivery names one of the group's plugin instances (`GET /api/instances?group=…`)
+ * and may set the instance's overridable fields for this notification in `overrides`;
+ * anything else in it is ignored. Credentials live on the instance, never here.
  */
 data class NotificationRequest(
     val group: String = "",
@@ -41,10 +42,9 @@ data class NotificationRequest(
 
     data class DeliveryRequest(
         val id: String? = null,
-        val plugin: String = "",
-        val label: String = "",
+        val instance: String = "",
         val enabled: Boolean = true,
-        val target: Map<String, String> = emptyMap(),
+        val overrides: Map<String, String> = emptyMap(),
     )
 
     fun toDraft() = NotificationDraft(
@@ -58,7 +58,7 @@ data class NotificationRequest(
         runAt = schedule.at,
         cron = schedule.cron,
         until = schedule.until,
-        deliveries = deliveries.map { NotificationDraft.Delivery(it.id, it.plugin, it.target, it.label, it.enabled) },
+        deliveries = deliveries.map { NotificationDraft.Delivery(it.id, it.instance, it.overrides, it.enabled) },
         paused = paused,
     )
 }

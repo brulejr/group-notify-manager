@@ -52,12 +52,12 @@ class DiscordPlugin : DeliveryPlugin {
         PluginField(
             "style", "Style", FieldType.SELECT,
             options = listOf(FieldOption("embed", "Embed card"), FieldOption("plain", "Plain message")),
-            defaultValue = "embed",
+            defaultValue = "embed", overridable = true,
         ),
         PluginField("username", "Post as", placeholder = "the webhook's own name", help = "Overrides the name shown on the post."),
         PluginField("avatarUrl", "Avatar URL", FieldType.URL),
         PluginField(
-            "mention", "Mention", placeholder = "@everyone, @here or a role id",
+            "mention", "Mention", placeholder = "@everyone, @here or a role id", overridable = true,
             help = "Pings before the post. A role is its numeric id (Developer Mode → Copy Role ID).",
         ),
     )

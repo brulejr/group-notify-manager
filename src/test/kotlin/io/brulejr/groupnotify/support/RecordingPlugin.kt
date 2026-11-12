@@ -31,7 +31,7 @@ class RecordingPlugin(override val id: String = "recording", vararg results: Del
     override val fields = listOf(
         PluginField("channel", "Channel", required = true),
         PluginField("token", "Token", secret = true),
-        PluginField("loud", "Loud", FieldType.CHECKBOX),
+        PluginField("loud", "Loud", FieldType.CHECKBOX, overridable = true),
     )
 
     override fun summarize(target: DeliveryTarget) = "#${target["channel"]}"

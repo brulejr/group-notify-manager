@@ -8,7 +8,7 @@
  */
 package io.brulejr.groupnotify.notification.api
 
-import io.brulejr.groupnotify.delivery.DeliveryService
+import io.brulejr.groupnotify.instance.InstanceService
 import io.brulejr.groupnotify.notification.BodyFormat
 import io.brulejr.groupnotify.notification.Notification
 import io.brulejr.groupnotify.notification.NotificationStatus
@@ -18,8 +18,9 @@ import java.time.LocalDateTime
 import java.util.UUID
 
 /**
- * A notification as the REST API returns it: secrets masked, times both as instants and
- * as local times in the schedule's zone.
+ * A notification as the REST API returns it: each delivery by its instance, with the
+ * notification's overrides, and times both as instants and as local times in the
+ * schedule's zone. No secret appears: those stay on the instance.
  */
 data class NotificationView(
     val id: UUID,
@@ -40,17 +41,22 @@ data class NotificationView(
 ) {
     data class ScheduleView(val kind: ScheduleKind, val zone: String, val at: LocalDateTime?, val cron: String?, val until: Instant?)
 
+    /**
+     * @property instanceName null when the instance has since been deleted.
+     * @property overrides only the notification's own values, where they differ.
+     */
     data class DeliveryView(
         val id: UUID,
-        val plugin: String,
-        val label: String,
+        val instance: UUID,
+        val instanceName: String?,
+        val plugin: String?,
         val enabled: Boolean,
         val summary: String,
-        val target: Map<String, String>,
+        val overrides: Map<String, String>,
     )
 
     companion object {
-        fun of(n: Notification, deliveries: DeliveryService) = NotificationView(
+        fun of(n: Notification, instances: InstanceService) = NotificationView(
             id = n.id,
             group = n.group,
             title = n.title,
@@ -64,8 +70,12 @@ data class NotificationView(
             status = n.status,
             nextRunAt = n.nextRunAt,
             lastRunAt = n.lastRunAt,
-            deliveries = n.deliveries.map {
-                DeliveryView(it.id, it.plugin, it.label, it.enabled, deliveries.summarize(it.plugin, it.target), deliveries.mask(it.plugin, it.target))
+            deliveries = n.deliveries.map { d ->
+                val instance = instances.get(d.instance)
+                DeliveryView(
+                    d.id, d.instance, instance?.name, instance?.plugin, d.enabled,
+                    instance?.let(instances::summary) ?: "deleted instance", d.overrides,
+                )
             },
             createdBy = n.createdBy,
             createdAt = n.createdAt,

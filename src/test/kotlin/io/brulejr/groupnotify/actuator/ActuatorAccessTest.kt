@@ -20,7 +20,7 @@ class ActuatorAccessTest : WebTest() {
 
     @Test
     fun `health is open to a container check, with every feature's indicator`() {
-        val features = listOf("security", "group", "audit", "delivery", "content", "notification", "dispatch", "console", "database")
+        val features = listOf("security", "group", "audit", "delivery", "content", "notification", "dispatch", "console", "database", "instance")
         val result = mvc.perform(get("/mgmt/health")).andExpect(status().isOk)
         features.forEach { result.andExpect(jsonPath("$.components.$it.status").value("UP")) }
     }

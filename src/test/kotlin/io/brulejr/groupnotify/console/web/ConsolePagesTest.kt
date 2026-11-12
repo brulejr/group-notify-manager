@@ -11,6 +11,7 @@ package io.brulejr.groupnotify.console.web
 import io.brulejr.groupnotify.audit.AuditEvent
 import io.brulejr.groupnotify.audit.AuditEventType
 import io.brulejr.groupnotify.audit.AuditPort
+import io.brulejr.groupnotify.instance.PluginInstance
 import io.brulejr.groupnotify.notification.BodyFormat
 import io.brulejr.groupnotify.notification.NotificationDraft
 import io.brulejr.groupnotify.notification.NotificationResult
@@ -25,6 +26,7 @@ import org.hamcrest.Matchers.startsWith
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
@@ -33,6 +35,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDateTime
 import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * Renders every console page through the real application context, so a template that
@@ -49,6 +52,10 @@ class ConsolePagesTest : WebTest() {
 
     private val alice = NotifyUser("alice", "Alice", null, setOf("notify_club"), admin = false, editor = true)
 
+    // Provisioned on first use in each test; the stores are emptied between tests.
+    private var discord: PluginInstance? = null
+    private var log: PluginInstance? = null
+
     private fun seed(kind: ScheduleKind = ScheduleKind.RECURRING, format: BodyFormat = BodyFormat.MARKDOWN): UUID {
         val draft = NotificationDraft(
             group = "notify_club", title = "Net night", subject = "Net tonight at {{time}}",
@@ -56,8 +63,8 @@ class ConsolePagesTest : WebTest() {
             format = format, kind = kind, zone = "America/New_York",
             runAt = LocalDateTime.now().plusDays(3), cron = "0 20 * * WED",
             deliveries = listOf(
-                NotificationDraft.Delivery(plugin = "discord", target = mapOf("webhookUrl" to "https://discord.com/api/webhooks/7/tok")),
-                NotificationDraft.Delivery(plugin = "log", target = mapOf("body" to "text")),
+                NotificationDraft.Delivery(instance = (discord ?: provision("Club Discord", "discord", mapOf("webhookUrl" to "https://discord.com/api/webhooks/7/tok"))).also { discord = it }.id.toString()),
+                NotificationDraft.Delivery(instance = (log ?: provision()).also { log = it }.id.toString(), overrides = mapOf("body" to "text")),
             ),
         )
         return (notifications.create(draft, alice) as NotificationResult.Saved).notification.id
@@ -84,7 +91,9 @@ class ConsolePagesTest : WebTest() {
             "/ui/notifications/$recurring/edit" to "Save changes",
             "/ui/notifications/$once/edit" to "data-format=\"HTML\"",
             "/ui/notifications/$recurring/copy" to "Net night (copy)",
-            "/ui/notifications/delivery?plugin=groupsio&index=3" to "deliveries[3].target.group",
+            "/ui/notifications/delivery?instance=${log!!.id}&index=3" to "deliveries[3].overrides.body",
+            "/ui/notifications/instances?group=notify_club" to "Club Discord",
+            "/ui/instances/list" to "Club log",
             "/ui/notifications/schedule-preview?kind=RECURRING&cron=0 9 * * MON&zone=America/New_York" to "Next runs",
             "/ui/notifications/schedule-preview?kind=RECURRING&cron=nonsense" to "not a valid cron",
             "/ui/history" to "Created",
@@ -104,9 +113,55 @@ class ConsolePagesTest : WebTest() {
     fun `a saved secret is never sent to the browser`() {
         val id = seed()
 
-        mvc.perform(get("/ui/notifications/$id/edit").alice())
+        mvc.perform(get("/ui/notifications/$id/edit").alice()).andExpect(content().string(not(containsString("webhooks/7/tok"))))
+        mvc.perform(get("/ui/instances/list").alice()).andExpect(content().string(not(containsString("webhooks/7/tok"))))
+        mvc.perform(get("/ui/instances/${discord!!.id}/edit").root())
             .andExpect(content().string(not(containsString("webhooks/7/tok"))))
             .andExpect(content().string(containsString("Saved — leave blank to keep it")))
+    }
+
+    @Test
+    fun `an admin provisions instances, a member only chooses among them`() {
+        val pages = mapOf(
+            "/ui/instances/new" to "New delivery instance",
+            "/ui/instances/new?plugin=groupsio&group=notify_club" to "config.apiKey",
+        )
+        pages.forEach { (path, text) -> mvc.perform(get(path).root()).andExpect(status().isOk).andExpect(content().string(containsString(text))) }
+        mvc.perform(get("/ui/instances/new?plugin=log").alice()).andExpect(status().isForbidden)
+
+        mvc.perform(
+            post("/ui/instances").root().with(csrf())
+                .param("group", "notify_club").param("plugin", "log").param("name", "Club log").param("config.body", "text"),
+        ).andExpect(header().string("HX-Redirect", startsWith("/ui/plugins?saved=")))
+        val created = instanceStore.list(null).single()
+        assertEquals(mapOf("body" to "text"), created.config)
+
+        mvc.perform(post("/ui/instances").alice().with(csrf()).param("group", "notify_club").param("plugin", "log").param("name", "Mine"))
+            .andExpect(status().isForbidden)
+        mvc.perform(get("/ui/instances/${created.id}/edit").root()).andExpect(status().isOk).andExpect(content().string(containsString("Save changes")))
+
+        // The group is a choice when creating, fixed when editing, and still sent with the form.
+        mvc.perform(get("/ui/instances/new?plugin=log").root())
+            .andExpect(content().string(containsString("<select class=\"form-select\" id=\"group\" name=\"group\"")))
+            .andExpect(content().string(containsString("<option value=\"notify_club\">Radio Club</option>")))
+        mvc.perform(get("/ui/instances/${created.id}/edit").root())
+            .andExpect(content().string(containsString("<input type=\"hidden\" name=\"group\" value=\"notify_club\">")))
+            .andExpect(content().string(containsString("disabled=\"disabled\"")))
+        mvc.perform(
+            post("/ui/instances/${created.id}").root().with(csrf())
+                .param("group", "notify_club").param("plugin", "log").param("name", "Club log, renamed").param("config.body", "text"),
+        ).andExpect(header().string("HX-Redirect", startsWith("/ui/plugins?saved=")))
+        assertEquals("Club log, renamed", instanceStore.find(created.id)!!.name)
+    }
+
+    @Test
+    fun `an instance in use is not deleted`() {
+        seed()
+
+        mvc.perform(delete("/ui/instances/${log!!.id}").root().with(csrf()))
+            .andExpect(header().string("HX-Trigger", "instancesChanged"))
+            .andExpect(content().string(containsString("Still used by 1 notification: Net night")))
+        assertTrue(instanceStore.find(log!!.id) != null)
     }
 
     @Test
@@ -125,7 +180,7 @@ class ConsolePagesTest : WebTest() {
                 .param("group", "notify_club").param("title", "Swap meet").param("subject", "Swap meet Saturday")
                 .param("format", "MARKDOWN").param("body", "Tables at 8")
                 .param("kind", "ONCE").param("runAt", LocalDateTime.now().plusDays(2).withNano(0).toString().take(16)).param("zone", "America/New_York")
-                .param("deliveries[5].plugin", "log").param("deliveries[5].target.body", "subject")
+                .param("deliveries[5].instance", provision().id.toString()).param("deliveries[5].overrides.body", "subject")
                 .param("deliveries[5].enabled", "false").param("deliveries[5].enabled", "true"),
         )
             .andExpect(status().isOk)
@@ -172,12 +227,12 @@ class ConsolePagesTest : WebTest() {
         mvc.perform(
             post("/ui/notifications").alice().with(csrf())
                 .param("group", "notify_club").param("title", "").param("kind", "RECURRING").param("cron", "0 25 * * *")
-                .param("deliveries[0].plugin", "discord").param("deliveries[0].target.webhookUrl", "https://evil.example/api/webhooks/1/x"),
+                .param("deliveries[0].instance", provision().id.toString()).param("deliveries[0].overrides.body", "everything"),
         )
             .andExpect(status().isOk)
             .andExpect(header().doesNotExist("HX-Redirect"))
             .andExpect(content().string(containsString("is-invalid")))
-            .andExpect(content().string(containsString("is not a Discord webhook")))
+            .andExpect(content().string(containsString("must be one of the choices")))
             .andExpect(content().string(containsString("not a valid cron expression")))
         assertEquals(0, store.list(null).size)
     }
@@ -202,7 +257,10 @@ class ConsolePagesTest : WebTest() {
         val draft = NotificationDraft(
             group = "notify_club", title = "Log only", subject = "s", body = "b", format = BodyFormat.MARKDOWN,
             kind = ScheduleKind.RECURRING, cron = "0 20 * * WED",
-            deliveries = listOf(NotificationDraft.Delivery(plugin = "log"), NotificationDraft.Delivery(plugin = "log", target = mapOf("body" to "text"))),
+            deliveries = listOf(
+                NotificationDraft.Delivery(instance = provision().id.toString()),
+                NotificationDraft.Delivery(instance = provision("Club log, in full", config = mapOf("body" to "text")).id.toString()),
+            ),
         )
         val id = (notifications.create(draft, alice) as NotificationResult.Saved).notification.id
 

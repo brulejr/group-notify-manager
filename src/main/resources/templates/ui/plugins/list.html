@@ -6,11 +6,20 @@
   <div class="page-header">
     <div>
       <h1>Delivery plugins</h1>
-      <p class="lead-text">The ways a notification can be sent. Each is a plugin: a jar found at startup, so new ones, a packet
-        radio gateway say, can be added without changing the application. Installation settings come from the configuration;
-        what a delivery asks for is filled in on each notification.</p>
+      <p class="lead-text">The ways a notification can be sent. An admin sets a plugin up for a group as a named
+        <strong>instance</strong>, with its credentials and where it sends; the group's notifications choose among its
+        instances, and may change only the settings the plugin marks as defaults.</p>
     </div>
   </div>
+  <div th:replace="~{ui/layout :: toast(${toast})}"></div>
+
+  <h2 class="h5 mb-3">Instances</h2>
+  <div id="instances" th:hx-get="@{/ui/instances/list}" hx-trigger="load, instancesChanged from:body" hx-target="this" hx-swap="innerHTML"
+       hx-disinherit="*">
+    <div class="text-body-secondary small"><span class="spinner-border spinner-border-sm me-1"></span>Loading…</div>
+  </div>
+
+  <h2 class="h5 mb-3 mt-4">Installed plugins</h2>
   <div class="row g-4">
     <div class="col-lg-6 col-xxl-4" th:each="p : ${plugins}">
       <div class="card h-100 plugin-card">
@@ -23,16 +32,18 @@
         <div class="card-body">
           <p th:text="${p.description}">description</p>
           <div class="alert alert-warning small py-2" th:unless="${p.ready}"><i class="bi bi-exclamation-triangle me-1"></i><span th:text="${p.reason}">reason</span></div>
-          <div class="fw-semibold small mb-1">Each delivery asks for</div>
+          <div class="fw-semibold small mb-1">An instance is set up with</div>
           <ul class="small field-list">
             <li th:each="f : ${p.fields}">
               <span class="fw-medium" th:text="${f.label}">label</span>
               <span class="text-danger" th:if="${f.required}">*</span>
               <i class="bi bi-lock text-body-secondary" th:if="${f.secret}" title="secret"></i>
+              <span class="badge text-bg-light border" th:if="${f.overridable}" title="A notification may change it">default</span>
               <span class="text-body-secondary" th:if="${!#strings.isEmpty(f.help)}" th:text="'— ' + ${f.help}">help</span>
             </li>
           </ul>
           <th:block th:if="${isAdmin}">
+            <a class="btn btn-sm btn-outline-primary" th:href="@{/ui/instances/new(plugin=${p.id})}"><i class="bi bi-plus-lg me-1"></i>New instance</a>
             <div class="fw-semibold small mb-1 mt-3">Installation</div>
             <dl class="props small mb-0">
               <dt>From</dt><dd class="mono" th:text="${p.source}">jar</dd>

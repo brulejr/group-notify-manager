@@ -43,7 +43,7 @@ notifications each person sees. See [docs/security.md](../../docs/security.md).
 | `LOGOUT_URL` | | The console's sign-out link, e.g. `https://auth.brulenet.dev/logout` |
 | `TRUSTED_PROXIES` | | Where forward-auth headers are believed from |
 | `DEFAULT_ZONE` | | New notifications' time zone; default `America/New_York` |
-| `GROUPSIO_API_KEY` | for groups.io | An API key from https://groups.io/settings/apikeys; posts go out as its member |
+| `NOTIFY_SECRET_KEY` | yes | Encrypts delivery instances' secrets: 32 bytes in base64 (`openssl rand -base64 32`). Back it up; without it, stored secrets must be re-entered |
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`, `MAIL_FROM_NAME` | | An SMTP server, only for an external plugin that sends mail |
 | `PLUGINS_DIR` | | A host directory of extra plugin jars; default `plugins-dir/` in the checkout |
 

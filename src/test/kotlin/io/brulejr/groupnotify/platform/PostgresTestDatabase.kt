@@ -52,6 +52,6 @@ object PostgresTestDatabase {
 
     /** Empties every table, so each test starts from nothing. */
     fun reset() {
-        jdbc.sql("TRUNCATE notifications, deliveries, audit_events").update()
+        jdbc.sql("TRUNCATE notifications, deliveries, audit_events, plugin_instances").update()
     }
 }

@@ -9,7 +9,6 @@
 package io.brulejr.groupnotify.plugins.groupsio
 
 import io.brulejr.groupnotify.plugin.PluginContext
-import io.brulejr.groupnotify.plugin.PluginSettings
 import java.net.URI
 import java.net.URLEncoder
 import java.net.http.HttpRequest
@@ -22,12 +21,14 @@ import java.time.Duration
  * POST; most failures answer 400 with `{"object": "error", "type": …, "extra": …}`.
  *
  * Throws [java.io.IOException] when groups.io does not answer.
+ *
+ * @param apiKey an instance's key: whose member posts.
+ * @param baseUrl `https://groups.io`, or a group's own domain.
  */
-class GroupsIoClient(private val context: PluginContext, settings: PluginSettings) {
+class GroupsIoClient(private val context: PluginContext, apiKey: String, baseUrl: String, private val timeout: Duration) {
 
-    private val authorization = "Bearer " + checkNotNull(settings["api-key"])
-    private val baseUrl = settings.getOrDefault("api-base-url", "https://groups.io").trimEnd('/')
-    private val timeout = Duration.ofSeconds(settings["timeout"]?.toLongOrNull() ?: 15)
+    private val authorization = "Bearer $apiKey"
+    private val baseUrl = baseUrl.trimEnd('/')
 
     /** One answer: its status, and its body as a JSON object where it is one. */
     data class Answer(val status: Int, val json: Map<*, *>?) {

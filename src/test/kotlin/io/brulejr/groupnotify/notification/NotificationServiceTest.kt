@@ -10,7 +10,6 @@ package io.brulejr.groupnotify.notification
 
 import io.brulejr.groupnotify.audit.AuditEventType
 import io.brulejr.groupnotify.audit.AuditQuery
-import io.brulejr.groupnotify.delivery.DeliveryService
 import io.brulejr.groupnotify.support.Fixtures
 import io.brulejr.groupnotify.support.TestUsers.admin
 import io.brulejr.groupnotify.support.TestUsers.alice
@@ -57,22 +56,37 @@ class NotificationServiceTest {
     }
 
     @Test
-    fun `a delivery's fields are checked and reported by index`() {
+    fun `a delivery must name one of the group's own instances, once`() {
+        val family = f.instance(group = "notify_family", name = "Family channel")
         val result = service.create(
             f.draft(
                 deliveries = listOf(
-                    NotificationDraft.Delivery(plugin = "recording", target = mapOf("channel" to "ok")),
-                    NotificationDraft.Delivery(plugin = "recording", target = emptyMap()),
-                    NotificationDraft.Delivery(plugin = "carrier-pigeon"),
+                    f.delivery(),
+                    f.delivery(),
+                    f.delivery(family),
+                    NotificationDraft.Delivery(instance = "not-an-id"),
                 ),
             ),
             alice,
         )
 
         assertEquals(
-            mapOf("deliveries[1].target.channel" to "is required", "deliveries[2].plugin" to "is not an installed plugin"),
+            mapOf(
+                "deliveries[1].instance" to "Club channel is chosen more than once",
+                "deliveries[2].instance" to "Family channel belongs to another group",
+                "deliveries[3].instance" to "is not a delivery instance",
+            ),
             problems(result),
         )
+    }
+
+    @Test
+    fun `moving a notification to another group needs that group's instances`() {
+        val n = created()
+
+        val moved = service.update(n.id, f.draft(group = "notify_family"), admin)
+
+        assertEquals(mapOf("deliveries[0].instance" to "Club channel belongs to another group"), problems(moved))
     }
 
     @Test
@@ -91,7 +105,8 @@ class NotificationServiceTest {
     fun `a member may only create in their own groups, an admin in any notification group`() {
         assertEquals("you are not a member of it", problems(service.create(f.draft(group = "notify_family"), alice))["group"])
         assertEquals("is not a notification group", problems(service.create(f.draft(group = "homelab_users"), alice))["group"])
-        assertIs<NotificationResult.Saved>(service.create(f.draft(group = "notify_family"), admin))
+        val family = f.instance(group = "notify_family", name = "Family channel")
+        assertIs<NotificationResult.Saved>(service.create(f.draft(group = "notify_family", deliveries = listOf(f.delivery(family))), admin))
     }
 
     @Test
@@ -142,19 +157,31 @@ class NotificationServiceTest {
     }
 
     @Test
-    fun `a secret left blank when editing keeps the stored one`() {
-        val n = created(f.draft(deliveries = listOf(NotificationDraft.Delivery(plugin = "recording", target = mapOf("channel" to "general", "token" to "s3cret")))))
+    fun `only overridable fields are kept, and only where they differ from the instance`() {
+        val loud = f.instance(name = "Loud channel", config = mapOf("channel" to "general", "loud" to "true"))
+
+        val n = created(
+            f.draft(
+                deliveries = listOf(
+                    // channel and token are the instance's: a notification cannot redirect or re-key it.
+                    f.delivery(overrides = mapOf("loud" to "true", "channel" to "elsewhere", "token" to "stolen")),
+                    f.delivery(loud, overrides = mapOf("loud" to "true")),
+                ),
+            ),
+        )
+
+        assertEquals(listOf(mapOf("loud" to "true"), emptyMap()), n.deliveries.map { it.overrides })
+    }
+
+    @Test
+    fun `a delivery keeps its id when re-saved, and an unchanged one is no change`() {
+        val n = created()
         val id = n.deliveries.single().id.toString()
 
-        val blank = f.draft(deliveries = listOf(NotificationDraft.Delivery(id = id, plugin = "recording", target = mapOf("channel" to "news", "token" to ""))))
-        val kept = assertIs<NotificationResult.Saved>(service.update(n.id, blank, alice)).notification.deliveries.single()
-        assertEquals(mapOf("channel" to "news", "token" to "s3cret", "loud" to "false"), kept.target)
+        val again = assertIs<NotificationResult.Saved>(service.update(n.id, f.draft(deliveries = listOf(f.delivery().copy(id = id))), alice)).notification
 
-        val masked = f.draft(deliveries = listOf(NotificationDraft.Delivery(id = id, plugin = "recording", target = mapOf("channel" to "news", "token" to DeliveryService.MASK))))
-        assertEquals("s3cret", assertIs<NotificationResult.Saved>(service.update(n.id, masked, alice)).notification.deliveries.single().target["token"])
-
-        val fresh = f.draft(deliveries = listOf(NotificationDraft.Delivery(plugin = "recording", target = mapOf("channel" to "news"))))
-        assertNull(assertIs<NotificationResult.Saved>(service.update(n.id, fresh, alice)).notification.deliveries.single().target["token"], "a new delivery inherits nothing")
+        assertEquals(n.deliveries.single().id, again.deliveries.single().id)
+        assertTrue(f.audit.history(alice, AuditQuery(notificationId = n.id)).first().detail.startsWith("next run"))
     }
 
     @Test

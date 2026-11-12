@@ -11,16 +11,16 @@ package io.brulejr.groupnotify.notification
 import java.util.UUID
 
 /**
- * One way a notification goes out: a plugin and the target it is given.
+ * One way a notification goes out: through one of its group's plugin instances.
  *
- * @property target the plugin's field values, secrets included; never shown as stored.
- * @property label the author's own name for it, e.g. `Members' channel`.
+ * @property instance the [io.brulejr.groupnotify.instance.PluginInstance] it sends through.
+ * @property overrides the notification's own values for the plugin's overridable fields,
+ *   only where they differ from the instance's; never a secret.
  * @property enabled a disabled delivery is kept but skipped.
  */
 data class NotificationDelivery(
     val id: UUID,
-    val plugin: String,
-    val target: Map<String, String>,
-    val label: String = "",
+    val instance: UUID,
+    val overrides: Map<String, String> = emptyMap(),
     val enabled: Boolean = true,
 )

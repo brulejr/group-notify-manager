@@ -20,7 +20,8 @@ A Gradle multi-project build:
 - the root project: the application, package `io.brulejr.groupnotify`.
 
 One package per feature: `notification/`, `dispatch/` (the scheduler and Send now),
-`delivery/` (the plugin host: loading, settings, retries, secret masking), `content/`
+`delivery/` (the plugin host: loading, settings, retries, secret masking), `instance/`
+(plugins provisioned per group as named instances, their encrypted secrets), `content/`
 (Markdown, sanitised HTML, text, placeholders), `audit/`, `group/`, `console/`.
 Following the conventions, each has exactly one `*Config` declaring its beans, a
 validated `*Datafill`, a `*Service` holding its logic, a REST controller under `api/`,
@@ -28,7 +29,7 @@ a page controller under `web/`, a `*HealthIndicator` and a `*InfoContributor`.
 Cross-cutting pieces: `platform/` (clock, `DatabaseMigrator`, `StoreType`,
 `SqlTimestamps`) and `security/` (forward-auth filter, OIDC mapping, `NotifyUser`).
 
-Stores sit behind ports (`NotificationPort`, `AuditPort`) with PostgreSQL and memory
+Stores sit behind ports (`NotificationPort`, `InstancePort`, `AuditPort`) with PostgreSQL and memory
 implementations, picked by `store: postgres|memory` in the feature's Datafill.
 Visibility is enforced in the services, never only in controllers: every
 user-facing method takes a `NotifyUser`, and a notification outside the user's groups
@@ -58,9 +59,14 @@ docker compose up -d     # dev services via COMPOSE_FILE in .env: PostgreSQL :54
 - The `*/postgres/*Test` classes run against Testcontainers and are skipped without Docker.
 - The boot jar's Main-Class is `PropertiesLauncher`, so `loader.path` / `LOADER_PATH`
   adds plugin jars. Don't switch it back to `JarLauncher`.
-- Secrets in a delivery target (`PluginField.secret`) never leave the server: the API
-  returns `********`, the form leaves the input empty, and blank or the mask on save
-  keeps the stored value (`DeliveryService.keepSecrets`).
+- Credentials live on delivery instances, which only admins manage; a notification's
+  delivery names an instance of its own group and may override only fields marked
+  `PluginField.overridable` (never a secret). Secret fields are sealed by `SecretCipher`
+  (AES-256-GCM, `NOTIFY_SECRET_KEY`) before they are stored, never leave the server
+  (the API returns `********`, the form leaves the input empty, blank or the mask on
+  save keeps the stored value), and are opened only in `InstanceService.target`, to send.
+- `instance` must not depend on `notification`: it learns what uses an instance through
+  `InstanceUsage`, which `NotificationConfig` provides.
 - Templates: give a template Java collections (`toMutableList()`), never Kotlin's empty
   singletons. Never put `th:if`/`th:each` on the element carrying `th:replace`. A
   container that sets `hx-target` also sets `hx-disinherit="*"`. Fragments fetched on

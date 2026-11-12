@@ -27,16 +27,22 @@ class NotificationApiTest : WebTest() {
     @Autowired
     lateinit var json: JsonMapper
 
-    private fun body(group: String = "notify_club", token: String? = "s3cret", deliveryId: String? = null) = """
+    /** The club's Discord channel, provisioned by an admin on first use in each test. */
+    private val discord by lazy { provision("Club Discord", "discord", mapOf("webhookUrl" to "https://discord.com/api/webhooks/42/s3cret")) }
+
+    private fun body(group: String = "notify_club", overrides: String = "{}") = """
         {
           "group": "$group",
           "title": "Field day",
           "subject": "Field day is {{date}}",
           "body": "Bring a **radio**.",
           "schedule": {"kind": "RECURRING", "cron": "0 9 * * SAT", "zone": "America/New_York"},
-          "deliveries": [{"id": ${deliveryId?.let { "\"$it\"" }}, "plugin": "discord",
-                          "target": {"webhookUrl": ${token?.let { "\"https://discord.com/api/webhooks/42/$it\"" } ?: "\"********\""}}}]
+          "deliveries": [{"instance": "${discord.id}", "overrides": $overrides}]
         }
+    """.trimIndent()
+
+    private fun instanceBody(name: String = "Club Discord", webhook: String = "https://discord.com/api/webhooks/42/s3cret") = """
+        {"group": "notify_club", "plugin": "discord", "name": "$name", "config": {"webhookUrl": "$webhook", "mention": "@here"}}
     """.trimIndent()
 
     private fun create(): Map<*, *> {
@@ -74,18 +80,55 @@ class NotificationApiTest : WebTest() {
     }
 
     @Test
-    fun `secrets are never returned, and sending the mask back keeps them`() {
+    fun `a notification names its instance and only overrides what the plugin allows`() {
         val created = create()
-        val id = created["id"]
-        val deliveryId = ((created["deliveries"] as List<*>).single() as Map<*, *>)["id"].toString()
-        mvc.perform(get("/api/notifications/$id").alice())
-            .andExpect(jsonPath("$.deliveries[0].target.webhookUrl").value("********"))
-            .andExpect(jsonPath("$.deliveries[0].summary").value("webhook 42"))
 
-        mvc.perform(put("/api/notifications/$id").alice().contentType(MediaType.APPLICATION_JSON).content(body(token = null, deliveryId = deliveryId)))
+        mvc.perform(get("/api/notifications/${created["id"]}").alice())
+            .andExpect(jsonPath("$.deliveries[0].instanceName").value("Club Discord"))
+            .andExpect(jsonPath("$.deliveries[0].summary").value("webhook 42"))
+        mvc.perform(
+            put("/api/notifications/${created["id"]}").alice().contentType(MediaType.APPLICATION_JSON)
+                .content(body(overrides = """{"mention": "@everyone", "webhookUrl": "https://discord.com/api/webhooks/1/evil"}""")),
+        )
             .andExpect(status().isOk)
-        val stored = store.list(null).single().deliveries.single().target["webhookUrl"]
-        kotlin.test.assertEquals("https://discord.com/api/webhooks/42/s3cret", stored)
+            .andExpect(jsonPath("$.deliveries[0].overrides.mention").value("@everyone"))
+            .andExpect(jsonPath("$.deliveries[0].overrides.webhookUrl").doesNotExist())
+    }
+
+    @Test
+    fun `only an admin provisions an instance, its secrets are never returned, and the mask keeps them`() {
+        mvc.perform(post("/api/instances").alice().contentType(MediaType.APPLICATION_JSON).content(instanceBody()))
+            .andExpect(status().isForbidden)
+        val created = json.readValue(
+            mvc.perform(post("/api/instances").root().contentType(MediaType.APPLICATION_JSON).content(instanceBody()))
+                .andExpect(status().isCreated)
+                .andExpect(jsonPath("$.config.webhookUrl").value("********"))
+                .andExpect(jsonPath("$.overridable", hasSize<Any>(2)))
+                .andReturn().response.contentAsString,
+            Map::class.java,
+        )
+        val id = created["id"]
+        // Sealed at rest, under the run's key.
+        kotlin.test.assertTrue(instanceStore.list(null).single().config.getValue("webhookUrl").startsWith("enc:v1:"))
+
+        mvc.perform(get("/api/instances?group=notify_club").alice()).andExpect(jsonPath("$[0].config.webhookUrl").value("********"))
+        mvc.perform(get("/api/instances/$id").bob()).andExpect(status().isNotFound)
+        mvc.perform(put("/api/instances/$id").root().contentType(MediaType.APPLICATION_JSON).content(instanceBody(name = "Renamed", webhook = "********")))
+            .andExpect(status().isOk)
+        val stored = instanceStore.list(null).single()
+        kotlin.test.assertEquals("Renamed", stored.name)
+        kotlin.test.assertEquals("https://discord.com/api/webhooks/42/s3cret", instances.target(stored, emptyMap())["webhookUrl"])
+        mvc.perform(get("/api/audit").root()).andExpect(jsonPath("$[0].detail").value("changed name Club Discord → Renamed"))
+    }
+
+    @Test
+    fun `an instance in use cannot be deleted`() {
+        create()
+
+        mvc.perform(delete("/api/instances/${discord.id}").root().header("X-Requested-With", "test"))
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.notifications[0]").value("Field day"))
+        mvc.perform(delete("/api/instances/${discord.id}").alice().header("X-Requested-With", "test")).andExpect(status().isForbidden)
     }
 
     @Test
@@ -113,8 +156,9 @@ class NotificationApiTest : WebTest() {
             .andExpect(jsonPath("$.ready").value(true))
             .andExpect(jsonPath("$.fields[0].key").value("webhookUrl"))
             .andExpect(jsonPath("$.fields[0].secret").value(true))
-        // No groups.io API key in the tests.
-        mvc.perform(get("/api/plugins/groupsio").alice()).andExpect(jsonPath("$.ready").value(false))
+            .andExpect(jsonPath("$.fields[0].overridable").value(false))
+        // Its key is an instance's now, not the installation's.
+        mvc.perform(get("/api/plugins/groupsio").alice()).andExpect(jsonPath("$.ready").value(true))
     }
 
     @Test

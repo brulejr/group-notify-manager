@@ -13,8 +13,11 @@ import io.brulejr.groupnotify.audit.AuditEventType
 import io.brulejr.groupnotify.audit.AuditService
 import io.brulejr.groupnotify.audit.DispatchTrigger
 import io.brulejr.groupnotify.content.ContentService
+import io.brulejr.groupnotify.delivery.DeliveryOutcome
 import io.brulejr.groupnotify.delivery.DeliveryService
 import io.brulejr.groupnotify.group.GroupService
+import io.brulejr.groupnotify.instance.InstanceService
+import io.brulejr.groupnotify.instance.SecretUnreadableException
 import io.brulejr.groupnotify.notification.Notification
 import io.brulejr.groupnotify.notification.NotificationDelivery
 import io.brulejr.groupnotify.notification.NotificationService
@@ -43,6 +46,7 @@ import java.util.concurrent.atomic.AtomicReference
 class DispatchService(
     private val notifications: NotificationService,
     private val deliveries: DeliveryService,
+    private val instances: InstanceService,
     private val content: ContentService,
     private val audit: AuditService,
     private val groups: GroupService,
@@ -137,14 +141,29 @@ class DispatchService(
     ): List<DeliveryReport> {
         val message = content.render(notification, groups.displayName(notification.group), at)
         return chosen.map { delivery ->
-            val outcome = deliveries.deliver(delivery.plugin, message, delivery.target)
-            val summary = deliveries.summarize(delivery.plugin, delivery.target)
+            val instance = instances.get(delivery.instance)
+            val (outcome, summary) = when {
+                instance == null -> refused("its delivery instance was deleted") to "deleted instance"
+                // Checked when saved; checked again in case the notification moved group since.
+                instance.group != notification.group -> refused("${instance.name} belongs to another group") to instance.name
+                else -> {
+                    val target = try {
+                        instances.target(instance, delivery.overrides)
+                    } catch (e: SecretUnreadableException) {
+                        null
+                    }
+                    (target?.let { deliveries.deliver(instance.plugin, message, it) }
+                        ?: refused("a secret of ${instance.name} cannot be decrypted; an admin must re-enter it")) to
+                        "${instance.name}: ${instances.summary(instance)}"
+                }
+            }
+            val plugin = instance?.plugin ?: "unknown"
             val (type, detail, reference) = when (val result = outcome.result) {
                 is DeliveryResult.Delivered -> Triple(AuditEventType.SENT, result.detail, result.reference)
                 is DeliveryResult.Failed -> Triple(AuditEventType.FAILED, result.reason, null)
             }
             (if (outcome.delivered) sent else failed).incrementAndGet()
-            if (!outcome.delivered) log.warn("'{}' via {} ({}) failed: {}", notification.title, delivery.plugin, summary, detail)
+            if (!outcome.delivered) log.warn("'{}' via {} ({}) failed: {}", notification.title, plugin, summary, detail)
             audit.record(
                 AuditEvent(
                     occurredAt = clock.instant(),
@@ -154,17 +173,20 @@ class DispatchService(
                     notificationTitle = notification.title,
                     group = notification.group,
                     deliveryId = delivery.id,
-                    plugin = delivery.plugin,
-                    target = listOf(delivery.label, summary).filter { it.isNotBlank() }.joinToString(": "),
+                    plugin = plugin,
+                    target = summary,
                     trigger = trigger,
                     detail = detail,
                     reference = reference,
                     attempts = outcome.attempts,
                 ),
             )
-            DeliveryReport(delivery, deliveries.plugin(delivery.plugin)?.name ?: delivery.plugin, summary, outcome)
+            DeliveryReport(delivery, instance?.name ?: "a deleted instance", summary, outcome)
         }
     }
+
+    /** A delivery that never reached its plugin. */
+    private fun refused(reason: String) = DeliveryOutcome(DeliveryResult.Failed(reason), 0)
 
     private fun record(notification: Notification, type: AuditEventType, actor: String, trigger: DispatchTrigger, detail: String) {
         audit.record(

@@ -36,7 +36,7 @@ class LogPlugin : DeliveryPlugin {
         PluginField(
             "body", "Write", FieldType.SELECT,
             options = listOf(FieldOption("subject", "Subject only"), FieldOption("text", "Subject and text")),
-            defaultValue = "subject",
+            defaultValue = "subject", overridable = true,
         ),
     )
 

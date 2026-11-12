@@ -1,0 +1,30 @@
+info:
+  name: Update Instance
+  type: http
+  seq: 4
+
+http:
+  method: PUT
+  url: "{{notify_url}}/api/instances/{{instance_id}}"
+  headers:
+    - name: Remote-User
+      value: "{{remote_user}}"
+    - name: Remote-Groups
+      value: "{{remote_groups}}"
+  body:
+    type: json
+    data: |-
+      {
+        "group": "notify_club",
+        "plugin": "log",
+        "name": "Club log",
+        "config": {"body": "subject"}
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

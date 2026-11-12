@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{ui/layout :: page(title=${existing == null} ? 'New delivery instance' : 'Edit ' + ${existing.name}, active='plugins', content=~{::main})}">
+<body>
+<main class="console-content">
+  <div class="page-header">
+    <div>
+      <div class="small mb-1"><a th:href="@{/ui/plugins}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Delivery plugins</a></div>
+      <h1 th:text="${existing == null} ? 'New delivery instance' : 'Edit ' + ${existing.name}">New delivery instance</h1>
+      <p class="lead-text">A plugin set up for one group under a name: its credentials, where it sends, and the defaults its
+        notifications start with. The group's members choose among its instances when they write a notification; they can change
+        only the fields marked as defaults, and never see a secret.</p>
+    </div>
+  </div>
+
+  <!--/* No plugin chosen yet: pick one. */-->
+  <div class="row g-4" th:if="${plugin == null}">
+    <div class="col-lg-6 col-xxl-4" th:each="p : ${plugins}">
+      <a class="card h-100 plugin-card text-decoration-none" th:href="@{/ui/instances/new(plugin=${p.id}, group=${form.group})}">
+        <div class="card-header">
+          <i class="bi plugin-icon" th:classappend="'bi-' + ${p.icon}"></i><span th:text="${p.name}">groups.io</span>
+          <span class="ms-auto badge" th:classappend="${p.ready} ? 'text-bg-success' : 'text-bg-warning'" th:text="${p.ready} ? 'Ready' : 'Not ready'">Ready</span>
+        </div>
+        <div class="card-body text-body"><p class="mb-0" th:text="${p.description}">description</p></div>
+      </a>
+    </div>
+  </div>
+
+  <!--/* The whole form is redrawn when it is refused, with each problem against its input. */-->
+  <th:block th:if="${plugin != null}">
+  <form th:fragment="form" id="instance-form" class="instance-form" novalidate hx-target="this" hx-swap="outerHTML" hx-disinherit="*"
+        th:hx-post="${existing == null} ? @{/ui/instances} : @{/ui/instances/{id}(id=${existing.id})}">
+    <div th:replace="~{ui/layout :: toast(${toast})}"></div>
+    <input type="hidden" name="plugin" th:value="${form.plugin}">
+    <div class="row g-4">
+      <div class="col-xl-8">
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi plugin-icon" th:classappend="'bi-' + ${plugin.icon}"></i><span th:text="${plugin.name}">groups.io</span></div>
+          <div class="card-body">
+            <p class="small text-body-secondary" th:text="${plugin.description}">description</p>
+            <div class="alert alert-danger py-2 small" th:if="${errors.containsKey('plugin')}" th:text="${errors.get('plugin')}">plugin</div>
+            <div class="row g-3">
+              <div class="col-md-5">
+                <label class="form-label fw-semibold" for="group">Group</label>
+                <!--/* Fixed once created: shown disabled, and sent from the hidden input, as a disabled field is not submitted. */-->
+                <input type="hidden" name="group" th:if="${existing != null}" th:value="${form.group}">
+                <select class="form-select" id="group" th:name="${existing == null} ? 'group' : null" th:disabled="${existing != null}"
+                        th:classappend="${errors.containsKey('group')} ? 'is-invalid'">
+                  <option value="" th:selected="${#strings.isEmpty(form.group)}">Choose a group…</option>
+                  <option th:each="g : ${knownGroups}" th:value="${g}" th:text="${groupNames.get(g) ?: g}" th:selected="${g == form.group}">group</option>
+                </select>
+                <div class="invalid-feedback" th:text="${errors.get('group')}"></div>
+                <div class="form-text" th:text="${existing == null} ? 'Only this group\'s notifications can use it. It cannot be changed later.' : 'Fixed once created.'">help</div>
+              </div>
+              <div class="col-md-7">
+                <label class="form-label fw-semibold" for="name">Name</label>
+                <input class="form-control" id="name" name="name" th:value="${form.name}" placeholder="e.g. Club announcements" maxlength="200"
+                       th:classappend="${errors.containsKey('name')} ? 'is-invalid'">
+                <div class="invalid-feedback" th:text="${errors.get('name')}"></div>
+                <div class="form-text">What authors pick it by. Unique within the group.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><i class="bi bi-sliders"></i>Configuration</div>
+          <div class="card-body">
+            <p class="small text-body-secondary">Secrets are encrypted when stored and never shown again; leave one blank to keep it.</p>
+            <div class="row g-3">
+              <th:block th:each="in : ${inputs}"><div th:replace="~{ui/plugins/fields :: field(${in})}"></div></th:block>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl-4">
+        <div class="card">
+          <div class="card-body d-grid gap-2">
+            <button type="submit" class="btn btn-primary">
+              <span class="htmx-indicator spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+              <i class="bi bi-check-lg me-1"></i><span th:text="${existing == null} ? 'Create instance' : 'Save changes'">Save</span></button>
+            <a class="btn btn-outline-secondary" th:href="@{/ui/plugins}">Cancel</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+  </th:block>
+</main>
+</body>
+</html>

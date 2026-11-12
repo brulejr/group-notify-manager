@@ -18,7 +18,6 @@ import io.brulejr.groupnotify.plugin.NotificationMessage
 import io.brulejr.groupnotify.plugin.PluginContext
 import io.brulejr.groupnotify.plugin.PluginField
 import io.brulejr.groupnotify.plugin.PluginLog
-import io.brulejr.groupnotify.plugin.PluginStatus
 import java.io.IOException
 import java.time.Duration
 import java.time.Instant
@@ -42,18 +41,20 @@ import java.time.OffsetDateTime
  * error, leaves unknown whether the post went out, so it is not retried: a second
  * attempt could post twice.
  *
+ * An instance holds the group, the API key (from https://groups.io/settings/apikeys) and,
+ * for a group on its own domain, the API's address; a notification can override only
+ * how it posts: hashtags, special notice, the topic settings.
+ *
  * Settings (`notify.delivery.settings.groupsio.*`):
- * - `api-key`: required, from https://groups.io/settings/apikeys.
- * - `api-base-url`: default `https://groups.io`; a group on its own domain uses that.
  * - `timeout`: seconds to wait for each call, default 15.
  * - `lookup-attempts`, `lookup-delay-ms`: how often, and how far apart, to look for the
  *   new post in the archive, which can lag the post a little; default 4 and 1500.
  */
 class GroupsIoPlugin : DeliveryPlugin {
 
-    private var client: GroupsIoClient? = null
+    private lateinit var context: PluginContext
     private var log: PluginLog? = null
-    private var status = PluginStatus.notReady("not started")
+    private var timeout = Duration.ofSeconds(15)
     private var lookupAttempts = 4
     private var lookupDelay = Duration.ofMillis(1500)
 
@@ -68,46 +69,52 @@ class GroupsIoPlugin : DeliveryPlugin {
             help = "The group's name, as in groups.io/g/<name>.",
         ),
         PluginField(
-            "hashtags", "Hashtags", placeholder = "e.g. #announcement, #meeting",
+            "apiKey", "API key", required = true, secret = true,
+            help = "From groups.io → Account → API Keys (groups.io/settings/apikeys). Posts go out as that key's member.",
+        ),
+        PluginField(
+            "hashtags", "Hashtags", placeholder = "e.g. #announcement, #meeting", overridable = true,
             help = "Added to the start of the subject. groups.io files the post under them.",
         ),
         PluginField(
-            "special", "Special notice", FieldType.CHECKBOX,
+            "special", "Special notice", FieldType.CHECKBOX, overridable = true,
             help = "Reaches every member, even those who get no email or digests. Moderators and owners only.",
         ),
         PluginField(
-            "fromOwner", "Post as the group's owners", FieldType.CHECKBOX,
+            "fromOwner", "Post as the group's owners", FieldType.CHECKBOX, overridable = true,
             help = "Sent from the group's owner address rather than yours. Moderators and owners only.",
         ),
         PluginField(
-            "sticky", "Pin to the top", FieldType.CHECKBOX,
+            "sticky", "Pin to the top", FieldType.CHECKBOX, overridable = true,
             help = "The topic stays at the top of the group's archive.",
         ),
         PluginField(
-            "locked", "Lock the topic", FieldType.CHECKBOX,
+            "locked", "Lock the topic", FieldType.CHECKBOX, overridable = true,
             help = "Nobody can reply: for announcements.",
         ),
         PluginField(
-            "replyTo", "Replies go", FieldType.SELECT,
+            "replyTo", "Replies go", FieldType.SELECT, overridable = true,
             options = listOf(FieldOption("", "As the group's default")) + TopicSettings.REPLY_TO,
             help = "Where a reply to this topic is sent.",
         ),
         PluginField(
-            "moderated", "Moderate replies", FieldType.CHECKBOX,
+            "moderated", "Moderate replies", FieldType.CHECKBOX, overridable = true,
             help = "Replies to the topic wait for a moderator's approval.",
+        ),
+        PluginField(
+            "apiBaseUrl", "API address", FieldType.URL, placeholder = DEFAULT_BASE_URL,
+            help = "Only for a group on its own domain.",
         ),
     )
 
     override fun start(context: PluginContext) {
         val settings = context.settings
+        this.context = context
         log = context.log
+        timeout = settings["timeout"]?.toLongOrNull()?.let { Duration.ofSeconds(it.coerceIn(1, 120)) } ?: timeout
         lookupAttempts = settings["lookup-attempts"]?.toIntOrNull()?.coerceIn(1, 10) ?: lookupAttempts
         lookupDelay = settings["lookup-delay-ms"]?.toLongOrNull()?.let { Duration.ofMillis(it.coerceIn(0, 10_000)) } ?: lookupDelay
-        status = PluginStatus.requireSettings(settings, PREFIX, "api-key")
-        client = if (status.ready) GroupsIoClient(context, settings) else null
     }
-
-    override fun status() = status
 
     override fun validate(target: DeliveryTarget): List<FieldProblem> = buildList {
         target["group"]?.let { if (!GROUP.matches(it.trim())) add(FieldProblem("group", "must be a group name such as myclub")) }
@@ -119,7 +126,8 @@ class GroupsIoPlugin : DeliveryPlugin {
         group(target) + hashtags(target).joinToString("") { " $it" }
 
     override fun deliver(message: NotificationMessage, target: DeliveryTarget): DeliveryResult {
-        val client = this.client ?: return DeliveryResult.Failed("groups.io is not configured: ${status.reason}")
+        val apiKey = target["apiKey"] ?: return DeliveryResult.Failed("the instance has no API key")
+        val client = GroupsIoClient(context, apiKey, target["apiBaseUrl"] ?: DEFAULT_BASE_URL, timeout)
         val group = group(target)
         val subject = (hashtags(target) + message.subject).joinToString(" ")
         val topic = TopicSettings.of(target)
@@ -134,6 +142,7 @@ class GroupsIoPlugin : DeliveryPlugin {
         val draftId = draft.json?.get("id")?.toString()
             ?: return DeliveryResult.Failed("groups.io gave the draft no id")
         val author = draft.json["user_id"]?.toString()
+
 
         val update = buildMap {
             put("draft_id", draftId)
@@ -255,7 +264,7 @@ class GroupsIoPlugin : DeliveryPlugin {
         .flatMap { it.split(' ') }.map { it.trim() }.filter { it.isNotEmpty() }.map { if (it.startsWith('#')) it else "#$it" }
 
     private companion object {
-        const val PREFIX = "notify.delivery.settings.groupsio"
+        const val DEFAULT_BASE_URL = "https://groups.io"
         val GROUP = Regex("[A-Za-z0-9][A-Za-z0-9._-]*")
         val HASHTAG = Regex("#[A-Za-z0-9_-]+")
         val CLOCK_ALLOWANCE: Duration = Duration.ofMinutes(5)

@@ -22,8 +22,7 @@ http:
         "format": "MARKDOWN",
         "schedule": {"kind": "RECURRING", "cron": "0 18 * * TUE#2", "zone": "America/New_York"},
         "deliveries": [
-          {"plugin": "log", "target": {"body": "text"}},
-          {"plugin": "groupsio", "label": "Members", "target": {"group": "myclub"}}
+          {"instance": "{{instance_id}}", "overrides": {"body": "subject"}}
         ]
       }
   auth: inherit

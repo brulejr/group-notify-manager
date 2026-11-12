@@ -54,7 +54,7 @@
           </td>
           <td>
             <span class="delivery-chip" th:each="d : ${row.deliveries}" th:classappend="${!d.enabled} ? 'disabled' : (${!d.ready} ? 'not-ready' : '')"
-                  th:title="${d.pluginName} + ': ' + ${d.summary} + (${!d.enabled} ? ' (disabled)' : '') + (${!d.ready} ? ' (not ready: ' + ${d.reason} + ')' : '')">
+                  th:title="${d.name} + ' (' + ${d.pluginName} + '): ' + ${d.summary} + (${!d.enabled} ? ' (disabled)' : '') + (${!d.ready} ? ' (not ready: ' + ${d.reason} + ')' : '')">
               <i class="bi" th:classappend="'bi-' + ${d.icon}"></i></span>
           </td>
           <td><span th:replace="~{ui/layout :: status(${n.status})}"></span></td>

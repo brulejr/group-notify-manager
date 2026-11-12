@@ -62,7 +62,7 @@ class DispatchServiceTest {
         assertNull(stored.nextRunAt)
         val events = history(n.id)
         assertEquals(listOf(AuditEventType.CREATED, AuditEventType.SENT, AuditEventType.COMPLETED), events.map { it.type })
-        assertEquals("#general", events[1].target)
+        assertEquals("Club channel: #general", events[1].target)
         assertEquals(DispatchTrigger.SCHEDULE, events[1].trigger)
         assertEquals(0, f.dispatch.runDue(), "a completed notification is not sent again")
     }
@@ -106,7 +106,7 @@ class DispatchServiceTest {
         val flaky = RecordingPlugin("flaky", DeliveryResult.Failed("timeout", retryable = true), DeliveryResult.Delivered("ok", "msg-1"))
         val f = Fixtures(flaky)
         val n = assertIs<NotificationResult.Saved>(
-            f.notifications.create(f.draft(deliveries = listOf(NotificationDraft.Delivery(plugin = "flaky", target = mapOf("channel" to "x")))), alice),
+            f.notifications.create(f.draft(deliveries = listOf(f.delivery(f.instance(plugin = "flaky")))), alice),
         ).notification
         f.clock.now = Instant.parse("2026-11-11T23:00:00Z")
 
@@ -125,8 +125,8 @@ class DispatchServiceTest {
             f.notifications.create(
                 f.draft(
                     deliveries = listOf(
-                        NotificationDraft.Delivery(plugin = "broken", target = mapOf("channel" to "a")),
-                        NotificationDraft.Delivery(plugin = "recording", target = mapOf("channel" to "b")),
+                        f.delivery(f.instance(name = "Broken", plugin = "broken")),
+                        f.delivery(),
                     ),
                 ),
                 alice,
@@ -147,8 +147,8 @@ class DispatchServiceTest {
         val n = create(
             f.draft(
                 deliveries = listOf(
-                    NotificationDraft.Delivery(plugin = "recording", target = mapOf("channel" to "a")),
-                    NotificationDraft.Delivery(plugin = "recording", target = mapOf("channel" to "b")),
+                    f.delivery(f.instance(name = "A", config = mapOf("channel" to "a"))),
+                    f.delivery(f.instance(name = "B", config = mapOf("channel" to "b"))),
                 ),
             ),
         )
@@ -156,7 +156,7 @@ class DispatchServiceTest {
         val all = assertIs<SendResult.Sent>(f.dispatch.sendNow(n.id, alice))
         assertEquals(2, all.reports.size)
         val one = assertIs<SendResult.Sent>(f.dispatch.sendNow(n.id, alice, n.deliveries[1].id))
-        assertEquals("#b", one.reports.single().summary)
+        assertEquals("B: #b", one.reports.single().summary)
 
         assertEquals(n.nextRunAt, f.notifications.find(n.id, alice)!!.nextRunAt)
         assertEquals(DispatchTrigger.MANUAL, history(n.id).last().trigger)
@@ -166,8 +166,46 @@ class DispatchServiceTest {
 
     @Test
     fun `a disabled delivery is skipped`() {
-        val n = create(f.draft(deliveries = listOf(NotificationDraft.Delivery(plugin = "recording", target = mapOf("channel" to "a"), enabled = false))))
+        val n = create(f.draft(deliveries = listOf(f.delivery(enabled = false))))
 
         assertIs<SendResult.NothingToSend>(f.dispatch.sendNow(n.id, alice))
+    }
+
+    @Test
+    fun `the plugin gets the instance's configuration, secrets opened, with the notification's overrides`() {
+        val n = create(f.draft(deliveries = listOf(f.delivery(overrides = mapOf("loud" to "true")))))
+
+        f.dispatch.sendNow(n.id, alice)
+
+        assertEquals(mapOf("channel" to "general", "token" to "s3cret", "loud" to "true"), plugin.sent.single().second.values)
+        val sent = history(n.id).last()
+        assertEquals("Club channel: #general", sent.target)
+        assertTrue("s3cret" !in sent.target.orEmpty() + sent.detail)
+    }
+
+    @Test
+    fun `a change to an instance's default reaches the notifications that did not override it`() {
+        val n = create()
+        f.instances.update(
+            f.club.id,
+            io.brulejr.groupnotify.instance.InstanceDraft("notify_club", "recording", "Club channel", mapOf("channel" to "news", "loud" to "true")),
+            io.brulejr.groupnotify.support.TestUsers.admin,
+        )
+
+        f.dispatch.sendNow(n.id, alice)
+
+        assertEquals(mapOf("channel" to "news", "token" to "s3cret", "loud" to "true"), plugin.sent.single().second.values)
+    }
+
+    @Test
+    fun `a secret that cannot be opened fails the delivery without calling the plugin`() {
+        val n = create()
+        // As if sealed under another key.
+        f.instanceStore.save(f.club.copy(config = f.club.config + ("token" to io.brulejr.groupnotify.instance.SecretCipher(null).seal("x"))))
+
+        val report = assertIs<SendResult.Sent>(f.dispatch.sendNow(n.id, alice)).reports.single()
+
+        assertTrue(plugin.sent.isEmpty())
+        assertEquals("a secret of Club channel cannot be decrypted; an admin must re-enter it", report.outcome.detail)
     }
 }

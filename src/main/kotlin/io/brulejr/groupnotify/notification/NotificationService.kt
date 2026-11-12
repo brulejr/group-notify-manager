@@ -11,8 +11,8 @@ package io.brulejr.groupnotify.notification
 import io.brulejr.groupnotify.audit.AuditEvent
 import io.brulejr.groupnotify.audit.AuditEventType
 import io.brulejr.groupnotify.audit.AuditService
-import io.brulejr.groupnotify.delivery.DeliveryService
 import io.brulejr.groupnotify.group.GroupService
+import io.brulejr.groupnotify.instance.InstanceService
 import io.brulejr.groupnotify.security.NotifyUser
 import java.time.Clock
 import java.time.Instant
@@ -33,7 +33,7 @@ import java.util.UUID
 class NotificationService(
     private val store: NotificationPort,
     private val groups: GroupService,
-    private val deliveries: DeliveryService,
+    private val instances: InstanceService,
     private val audit: AuditService,
     private val datafill: NotificationDatafill,
     private val clock: Clock,
@@ -147,7 +147,7 @@ class NotificationService(
         val zone = draft.zone.trim().ifEmpty { datafill.defaultZone }.let { runCatching { ZoneId.of(it) }.getOrNull() }
         if (zone == null) problem("zone", "is not a time zone")
         val schedule = zone?.let { schedule(draft, it, existing, now, ::problem) }
-        val built = deliveries(draft.deliveries, existing, ::problem)
+        val built = deliveries(draft.deliveries, group, existing, ::problem)
 
         if (problems.isNotEmpty() || schedule == null) return NotificationResult.Invalid(problems.toList())
 
@@ -216,25 +216,41 @@ class NotificationService(
         }
     }
 
+    /**
+     * Each delivery must name one of [group]'s instances, once; its overrides are kept
+     * only for the plugin's overridable fields and where they differ from the instance.
+     */
     private fun deliveries(
         drafts: List<NotificationDraft.Delivery>,
+        group: String,
         existing: Notification?,
         problem: (String, String) -> Boolean,
     ): List<NotificationDelivery> {
         if (drafts.isEmpty()) problem("deliveries", "add at least one delivery")
         if (drafts.size > datafill.maxDeliveries) problem("deliveries", "at most ${datafill.maxDeliveries} deliveries")
         val previous = existing?.deliveries.orEmpty().associateBy { it.id.toString() }
+        val chosen = mutableSetOf<UUID>()
         return drafts.mapIndexedNotNull { index, draft ->
             val prefix = "deliveries[$index]"
-            if (deliveries.plugin(draft.plugin) == null) {
-                problem("$prefix.plugin", "is not an installed plugin")
-                return@mapIndexedNotNull null
+            val instance = runCatching { UUID.fromString(draft.instance.trim()) }.getOrNull()?.let(instances::get)
+            when {
+                instance == null -> {
+                    problem("$prefix.instance", "is not a delivery instance")
+                    return@mapIndexedNotNull null
+                }
+                // An instance of another group would send where this group may not.
+                instance.group != group -> {
+                    problem("$prefix.instance", "${instance.name} belongs to another group")
+                    return@mapIndexedNotNull null
+                }
+                !chosen.add(instance.id) -> problem("$prefix.instance", "${instance.name} is chosen more than once")
             }
-            val before = draft.id?.let { previous[it] }?.takeIf { it.plugin == draft.plugin }
-            val target = deliveries.keepSecrets(draft.plugin, deliveries.normalize(draft.plugin, draft.target), before?.target)
-            deliveries.validate(draft.plugin, target).forEach { problem(if (it.field == "plugin") "$prefix.plugin" else "$prefix.target.${it.field}", it.reason) }
-            if (draft.label.length > 100) problem("$prefix.label", "must be at most 100 characters")
-            NotificationDelivery(before?.id ?: UUID.randomUUID(), draft.plugin, target, draft.label.trim(), draft.enabled)
+            val overrides = instances.overrides(checkNotNull(instance), draft.overrides)
+            instances.checkOverrides(instance, overrides).forEach {
+                problem(if (it.field in setOf("plugin", "instance")) "$prefix.instance" else "$prefix.overrides.${it.field}", it.reason)
+            }
+            val id = draft.id?.let { previous[it] }?.id ?: UUID.randomUUID()
+            NotificationDelivery(id, instance.id, overrides, draft.enabled)
         }
     }
 

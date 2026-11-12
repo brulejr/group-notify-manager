@@ -90,6 +90,14 @@ notify:
     store: ${AUDIT_STORE:postgres}
     retention: 365d
 
+  # Delivery instances: each plugin set up for one group by an admin, credentials
+  # included. Their secrets are encrypted (AES-256-GCM) with secret-key, 32 bytes in
+  # base64: `openssl rand -base64 32`, which scripts/bootstrap.sh writes to .env. Keep
+  # it safe: without it, stored secrets cannot be read and must be entered again.
+  instances:
+    store: ${INSTANCE_STORE:postgres}
+    secret-key: ${NOTIFY_SECRET_KEY:}
+
   # The scheduler: due notifications are looked for every poll-interval. A run missed by
   # more than misfire-grace, while the application was down, is skipped, not sent late.
   dispatch:
@@ -98,9 +106,9 @@ notify:
     misfire-grace: 1h
     threads: 4
 
-  # The delivery plugins. Each plugin's settings go under settings.<plugin id>; see
-  # docs/plugins.md for what each takes. Secrets belong in the environment, e.g.
-  # NOTIFY_DELIVERY_SETTINGS_<ID>_<SETTING>.
+  # The delivery plugins. Credentials are not set here but on each instance, in the
+  # console. Installation policy (timeouts, allowed hosts) goes under
+  # settings.<plugin id>; see docs/plugins.md, e.g. NOTIFY_DELIVERY_SETTINGS_<ID>_<SETTING>.
   delivery:
     max-attempts: 3
     retry-backoff: 5s
@@ -108,10 +116,7 @@ notify:
     mail:
       from: ${MAIL_FROM:notify@localhost}
       from-name: ${MAIL_FROM_NAME:}
-    settings:
-      groupsio:
-        # From https://groups.io/settings/apikeys; posts go out as that key's member.
-        api-key: ${GROUPSIO_API_KEY:}
+    settings: {}
 
   content:
     date-format: "EEEE, MMMM d, yyyy"

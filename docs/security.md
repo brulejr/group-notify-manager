@@ -5,11 +5,15 @@ Nothing about users or membership is stored here.
 
 ## Who sees what
 
-| | Sees | Manages | `/mgmt` |
-| --- | --- | --- | --- |
-| A member of a group | That group's notifications and history | Them, unless `editor-group` is set and they are not in it | no |
-| An admin (`admin-group`, default `homelab_admins`) | Every group's | Every group's | yes |
-| Anyone else | Nothing; another group's notification is *not found* | | |
+| | Sees | Manages | Delivery instances | `/mgmt` |
+| --- | --- | --- | --- | --- |
+| A member of a group | That group's notifications and history | Them, unless `editor-group` is set and they are not in it | Sees the group's, without secrets, and chooses among them | no |
+| An admin (`admin-group`, default `homelab_admins`) | Every group's | Every group's | Provisions, edits and deletes every group's | yes |
+| Anyone else | Nothing; another group's notification is *not found* | | | |
+
+A notification can only send through its own group's instances, and can change only
+the fields the plugin marks as overridable, never a credential or where it sends; this
+is checked when it is saved and again when it is sent.
 
 Which of someone's groups are notification groups is `notify.groups.pattern`, e.g.
 `notify_.*`, so `homelab_users` is not offered as a group to notify. Give groups
@@ -81,8 +85,16 @@ requests. The Bruno collection sends `X-Requested-With` on its body-less calls.
 
 ## Secrets
 
-Plugin credentials (such as the SMTP password) are installation settings, from the
-environment, never in the database. Per-delivery secrets, such as a Discord webhook
-URL, are stored with the notification but never returned: the API shows `********`
-and the form an empty input. Sending either back keeps the stored value. They are not
-encrypted at rest yet; see the open questions in [DESIGN.md](DESIGN.md).
+Credentials, such as a groups.io API key or a Discord webhook URL, are entered by an
+admin on a delivery instance. They are encrypted before they are stored (AES-256-GCM,
+under `NOTIFY_SECRET_KEY`), never returned: the API shows `********` and the form an
+empty input, and sending either back keeps the stored value. They are opened only to
+send, and never written to the history or the log.
+
+`NOTIFY_SECRET_KEY` is 32 bytes in base64; `scripts/bootstrap.sh` makes one
+(`openssl rand -base64 32`). Back it up beside the database: without it, the stored
+secrets cannot be read and must be entered again. Without one set, a key is made for
+each run, health says so, and secrets stored in PostgreSQL are lost on restart.
+
+The SMTP password, for a plugin that sends mail, stays an installation setting from
+the environment.

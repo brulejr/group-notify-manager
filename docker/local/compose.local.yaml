@@ -33,7 +33,7 @@ services:
       MAIL_SMTP_AUTH: "false"
       MAIL_STARTTLS: "false"
       MAIL_FROM: ${MAIL_FROM:-notify@localhost}
-      GROUPSIO_API_KEY: ${GROUPSIO_API_KEY:-}
+      NOTIFY_SECRET_KEY: ${NOTIFY_SECRET_KEY:?run scripts/bootstrap.sh first}
       DEFAULT_ZONE: ${DEFAULT_ZONE:-America/New_York}
       # No Authelia locally: every request is this user. Never do this in production.
       NOTIFY_SECURITY_DEV_USER_USERNAME: ${DEV_USER:-devuser}

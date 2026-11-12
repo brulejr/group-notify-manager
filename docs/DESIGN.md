@@ -32,14 +32,18 @@ gets them.
 | `group` | Which groups hold notifications, and who may see or change a group's |
 | `notification` | Notifications and their deliveries: validation, schedule, pause/resume, stores |
 | `content` | The body in every form: Markdown → HTML, HTML sanitising, HTML → Markdown / text, placeholders |
-| `delivery` | The plugin host: loading, settings, the context lent to plugins, retries, secrets |
+| `delivery` | The plugin host: loading, settings, the context lent to plugins, retries, masking |
+| `instance` | Plugins provisioned per group as named instances: credentials, defaults, encryption of secrets |
 | `dispatch` | The scheduler that finds due notifications, and Send now |
 | `audit` | The history of changes and deliveries |
 | `console` | The dashboard and the pieces every page shares |
 | `platform` | Clock, PostgreSQL schema migration, store type |
 
-Dependencies run one way: `security` ← `group` ← `audit` ← `notification` ←
-`dispatch`, with `delivery` and `content` used by `notification` and `dispatch`.
+Dependencies run one way: `security` ← `group` ← `audit` ← `instance` ←
+`notification` ← `dispatch`, with `delivery` used by `instance` and `dispatch`, and
+`content` by `notification` and `dispatch`. `instance` learns which notifications use
+an instance through `InstanceUsage`, which `notification` provides, rather than by
+depending on it.
 
 ## Model
 
@@ -57,8 +61,21 @@ active. A one-off completes once sent; a recurring one when it passes its end da
 Resuming picks up from now: missed runs are not sent. A one-off whose time passed while
 paused cannot be resumed without a new time.
 
-A **delivery** is a plugin id, a target (the values of that plugin's fields), a label
-and an enabled flag. Targets are stored as `jsonb`.
+A **plugin instance** is a delivery plugin set up by an admin for one group under a
+name: every one of the plugin's field values, credentials included. Its group and
+plugin are fixed once created; its name is unique within the group.
+
+A **delivery** names one instance of the notification's own group, the notification's
+**overrides** of the plugin's overridable fields, and an enabled flag. Only overrides
+that differ from the instance are kept, so a later change to an instance's default
+reaches every notification that did not choose otherwise. At send time the instance's
+values, secrets opened, and the overrides are merged into the target the plugin is
+given.
+
+Why instances, and not a plugin's configuration on each notification: one place to
+enter and rotate a credential, so every notification of a group posts the same way;
+and authors, who need not be trusted with credentials, can only send where an admin
+has set up for their group, changing how a post looks but never where it goes.
 
 ## Security and groups
 
@@ -96,10 +113,11 @@ Plugins receive all three plus the subject, in a `NotificationMessage`.
 
 ## Delivery plugins
 
-See [plugins.md](plugins.md). A plugin declares its **fields** (what each delivery
-asks for, which the console turns into a form) and receives its **settings**
-(per-installation credentials from `notify.delivery.settings.<id>.*`) once, in
-`start`. It is lent HTTP, JSON, mail and a log through `PluginContext`.
+See [plugins.md](plugins.md). A plugin declares its **fields** (what an instance is
+set up with, which the console turns into a form; some marked `overridable`, never a
+secret one) and receives its **settings** (installation policy such as timeouts from
+`notify.delivery.settings.<id>.*`, not credentials) once, in `start`. It is lent HTTP,
+JSON, mail and a log through `PluginContext`.
 
 Plugins are found by `ServiceLoader` from the class path, which includes any jars in
 `loader.path`: the boot jar starts with `PropertiesLauncher`. The `log` plugin is a
@@ -136,7 +154,8 @@ console's Test button), and leaves the schedule alone.
 ## Audit
 
 Every create, edit (with what changed), pause, resume, delete, send, failure, skip and
-completion. Delivery events carry the plugin, the target's summary (never a secret),
+completion; and every change to an instance, naming the fields changed but never a
+secret's value. Delivery events carry the plugin, the instance's name and summary (never a secret),
 the detail or failure reason, the service's reference id and the number of attempts.
 Events are kept when the notification is deleted and purged after `retention`.
 History is filtered by group exactly as notifications are.
@@ -145,17 +164,29 @@ History is filtered by group exactly as notifications are.
 
 PostgreSQL in its own schema (`group_notify`), migrated by Flyway on first use; or
 memory, for tests and trying it out. Tables: `notifications`, `deliveries` (cascade
-delete), `audit_events`.
+delete with their notification; a foreign key to `plugin_instances`, so an instance in
+use cannot be deleted), `plugin_instances` (configuration as `jsonb`, secret values
+sealed as `enc:v1:…`), `audit_events`.
+
+Instance secrets are sealed with AES-256-GCM under `notify.instances.secret-key`
+(`NOTIFY_SECRET_KEY`, 32 bytes in base64, written to `.env` by `scripts/bootstrap.sh`),
+a fresh nonce each time; the tag also detects a value altered in the database. Without
+a key one is made for the run: health warns, and in PostgreSQL goes down once there are
+instances, as their secrets would not survive a restart.
+
+V2 introduced instances and dropped the per-notification delivery configuration that
+came before, leaving those notifications with no deliveries until instances are chosen.
 
 ## Open questions
 
-1. **Secrets at rest.** Discord webhook URLs and the like are stored in plain `jsonb`.
-   **Proposed:** encrypt secret fields with a key from the environment.
+1. **Rotating the secret key.** Instance secrets are encrypted, but there is no way yet
+   to re-seal them under a new `NOTIFY_SECRET_KEY`; for now, set the new key and
+   re-enter each secret. **Proposed:** accept a previous key for reading.
 2. **Finding a groups.io post.** `postdraft` answers without the new message, so the
    plugin finds it in the archive: the newest message by the key's member, posted
    since the send began, whose subject carries the notification's. Two identical
    notifications sent at once to the same group could be confused.
-3. **Recipients from LDAP.** Delivery targets are typed in. They could come from
+3. **Recipients from LDAP.** Instance targets are typed in. They could come from
    group members' LLDAP attributes, so "every member of notify_club" stays current.
 4. **More than one instance.** The conditional advance already prevents double sends;
    nothing else assumes one instance, but it has not been tried.

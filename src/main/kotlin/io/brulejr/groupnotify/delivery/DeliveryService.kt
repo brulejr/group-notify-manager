@@ -58,14 +58,32 @@ class DeliveryService(
     }
 
     /**
-     * Fills secret fields left blank from [previous], the stored target of the same
-     * delivery: the console never shows a secret again, so blank means unchanged.
+     * [values] limited to the plugin's [overridable][PluginField.overridable] fields and
+     * normalised, leaving out those equal to [defaults]: a notification's own settings,
+     * so a later change to an instance's default still reaches every notification that
+     * did not choose otherwise.
      */
-    fun keepSecrets(pluginId: String, values: Map<String, String>, previous: Map<String, String>?): Map<String, String> {
-        if (previous == null) return values
-        val secrets = secretKeys(pluginId)
-        return values + previous.filterKeys { it in secrets && (values[it].isNullOrBlank() || values[it] == MASK) }
+    fun overrides(pluginId: String, values: Map<String, String>, defaults: Map<String, String>): Map<String, String> {
+        val plugin = byId[pluginId]?.plugin ?: return emptyMap()
+        val keys = plugin.fields.filter { it.overridable }.map { it.key }.toSet()
+        val given = values.filterKeys { it in keys }
+        return normalize(pluginId, given)
+            .filterKeys { it in given }
+            .filter { (key, value) -> value != (defaults[key] ?: absent(plugin, key)) }
     }
+
+    /** The keys of [pluginId]'s overridable fields. */
+    fun overridableKeys(pluginId: String): Set<String> =
+        byId[pluginId]?.plugin?.fields?.filter { it.overridable }?.map { it.key }?.toSet().orEmpty()
+
+    /** What a new instance of [pluginId] starts with: each field's default, checkboxes off. */
+    fun defaults(pluginId: String): Map<String, String> = byId[pluginId]?.plugin?.fields.orEmpty()
+        .filter { it.defaultValue.isNotEmpty() || it.type == FieldType.CHECKBOX }
+        .associate { it.key to it.defaultValue.ifEmpty { "false" } }
+
+    /** The keys of [pluginId]'s secret fields. */
+    fun secretKeys(pluginId: String): Set<String> =
+        byId[pluginId]?.plugin?.fields?.filter { it.secret }?.map { it.key }?.toSet().orEmpty()
 
     /** [values] with every secret replaced by [MASK], for showing. */
     fun mask(pluginId: String, values: Map<String, String>): Map<String, String> {
@@ -143,8 +161,9 @@ class DeliveryService(
         }
     }
 
-    private fun secretKeys(pluginId: String): Set<String> =
-        byId[pluginId]?.plugin?.fields?.filter { it.secret }?.map { it.key }?.toSet().orEmpty()
+    /** What an unset field amounts to once normalised: a checkbox is off, anything else empty. */
+    private fun absent(plugin: DeliveryPlugin, key: String): String? =
+        if (plugin.fields.firstOrNull { it.key == key }?.type == FieldType.CHECKBOX) "false" else null
 
     private fun describe(handle: PluginHandle): PluginDescriptor {
         val status = handle.status()

@@ -8,7 +8,7 @@
  */
 package io.brulejr.groupnotify.notification.api
 
-import io.brulejr.groupnotify.delivery.DeliveryService
+import io.brulejr.groupnotify.instance.InstanceService
 import io.brulejr.groupnotify.notification.NotificationFilter
 import io.brulejr.groupnotify.notification.NotificationResult
 import io.brulejr.groupnotify.notification.NotificationService
@@ -37,7 +37,7 @@ import java.util.UUID
 @RequestMapping("/api/notifications")
 class NotificationController(
     private val notifications: NotificationService,
-    private val deliveries: DeliveryService,
+    private val instances: InstanceService,
     private val clock: Clock,
 ) {
 
@@ -47,11 +47,11 @@ class NotificationController(
         @RequestParam(required = false) q: String?,
         @RequestParam(required = false) group: String?,
         @RequestParam(required = false) status: NotificationStatus?,
-    ): List<NotificationView> = notifications.list(user, NotificationFilter(q, group, status)).map { NotificationView.of(it, deliveries) }
+    ): List<NotificationView> = notifications.list(user, NotificationFilter(q, group, status)).map { NotificationView.of(it, instances) }
 
     @GetMapping("/{id}")
     fun get(user: NotifyUser, @PathVariable id: UUID): ResponseEntity<NotificationView> =
-        notifications.find(id, user)?.let { ResponseEntity.ok(NotificationView.of(it, deliveries)) } ?: ResponseEntity.notFound().build()
+        notifications.find(id, user)?.let { ResponseEntity.ok(NotificationView.of(it, instances)) } ?: ResponseEntity.notFound().build()
 
     /** The next runs, as instants. */
     @GetMapping("/{id}/upcoming")
@@ -82,7 +82,7 @@ class NotificationController(
     }
 
     private fun respond(result: NotificationResult, success: HttpStatus = HttpStatus.OK): ResponseEntity<Any> = when (result) {
-        is NotificationResult.Saved -> ResponseEntity.status(success).body(NotificationView.of(result.notification, deliveries))
+        is NotificationResult.Saved -> ResponseEntity.status(success).body(NotificationView.of(result.notification, instances))
         is NotificationResult.Invalid -> ResponseEntity.badRequest().body(NotificationErrors.of(result.problems))
         NotificationResult.NotFound -> ResponseEntity.notFound().build()
         NotificationResult.Forbidden -> ResponseEntity.status(HttpStatus.FORBIDDEN).build()

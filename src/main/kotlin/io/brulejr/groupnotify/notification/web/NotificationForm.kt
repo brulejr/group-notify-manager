@@ -21,8 +21,8 @@ import java.time.format.DateTimeFormatter
 
 /**
  * The notification form as submitted, kept as the strings typed so a refused form is
- * redrawn exactly as it was. A delivery's inputs are named `deliveries[n].plugin`,
- * `deliveries[n].target.<key>` and so on; n is only a row number in the page and may
+ * redrawn exactly as it was. A delivery's inputs are named `deliveries[n].instance`,
+ * `deliveries[n].overrides.<key>` and so on; n is only a row number in the page and may
  * have gaps where rows were removed.
  */
 data class NotificationForm(
@@ -39,12 +39,12 @@ data class NotificationForm(
     val paused: Boolean = false,
     val deliveries: List<Delivery> = emptyList(),
 ) {
+    /** @property overrides the values typed for the instance's overridable fields. */
     data class Delivery(
         val id: String = "",
-        val plugin: String,
-        val label: String = "",
+        val instance: String,
         val enabled: Boolean = true,
-        val values: Map<String, String> = emptyMap(),
+        val overrides: Map<String, String> = emptyMap(),
     )
 
     /** The draft, with any time that would not parse reported against its input. */
@@ -59,7 +59,7 @@ data class NotificationForm(
         val draft = NotificationDraft(
             group = group, title = title, subject = subject, body = body, format = format, kind = kind, zone = zone,
             runAt = parsedRunAt, cron = if (kind == ScheduleKind.RECURRING) cron else "", until = parsedUntil,
-            deliveries = deliveries.map { NotificationDraft.Delivery(it.id.ifBlank { null }, it.plugin, it.values, it.label, it.enabled) },
+            deliveries = deliveries.map { NotificationDraft.Delivery(it.id.ifBlank { null }, it.instance, it.overrides, it.enabled) },
             paused = paused,
         )
         return draft to problems
@@ -90,20 +90,19 @@ data class NotificationForm(
                 cron = one("cron"),
                 until = one("until"),
                 paused = params["paused"]?.lastOrNull() == "true",
-                deliveries = rows.values.filter { !it["plugin"].isNullOrBlank() }.map { row ->
+                deliveries = rows.values.filter { !it["instance"].isNullOrBlank() }.map { row ->
                     Delivery(
                         id = row["id"].orEmpty(),
-                        plugin = row.getValue("plugin"),
-                        label = row["label"].orEmpty(),
+                        instance = row.getValue("instance"),
                         enabled = row["enabled"] != "false",
-                        values = row.filterKeys { it.startsWith("target.") }.mapKeys { it.key.removePrefix("target.") },
+                        overrides = row.filterKeys { it.startsWith("overrides.") }.mapKeys { it.key.removePrefix("overrides.") },
                     )
                 },
             )
         }
 
-        /** A stored notification as the form shows it. Secrets are not sent to the browser. */
-        fun of(n: Notification, mask: (String, Map<String, String>) -> Map<String, String>) = NotificationForm(
+        /** A stored notification as the form shows it. It holds no secret: those stay on the instances. */
+        fun of(n: Notification) = NotificationForm(
             group = n.group,
             title = n.title,
             subject = n.subject,
@@ -114,7 +113,7 @@ data class NotificationForm(
             runAt = n.schedule.runAt?.atZone(n.schedule.zone)?.format(LOCAL).orEmpty(),
             cron = n.schedule.cron.orEmpty(),
             until = n.schedule.until?.atZone(n.schedule.zone)?.toLocalDate()?.toString().orEmpty(),
-            deliveries = n.deliveries.map { Delivery(it.id.toString(), it.plugin, it.label, it.enabled, mask(it.plugin, it.target)) },
+            deliveries = n.deliveries.map { Delivery(it.id.toString(), it.instance.toString(), it.enabled, it.overrides) },
         )
 
         fun blank(group: String, zone: ZoneId) = NotificationForm(group = group, zone = zone.id)

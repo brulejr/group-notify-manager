@@ -29,11 +29,15 @@ class GroupsIoPluginTest {
     private val plugin = GroupsIoPlugin().apply {
         start(
             FakePluginContext(
-                mapOf("api-key" to "k3y", "api-base-url" to server.baseUrl, "timeout" to "2", "lookup-attempts" to "2", "lookup-delay-ms" to "0"),
+                mapOf("timeout" to "2", "lookup-attempts" to "2", "lookup-delay-ms" to "0"),
             ),
         )
     }
-    private val club = DeliveryTarget(mapOf("group" to "brulenet"))
+    /** An instance's values, the key and the stub's address included, with [values]. */
+    private fun target(values: Map<String, String>) =
+        DeliveryTarget(mapOf("apiKey" to "k3y", "apiBaseUrl" to server.baseUrl) + values)
+
+    private val club by lazy { target(mapOf("group" to "brulenet")) }
     private val meeting = TestMessages.meeting()
 
     /** The archive's newest messages: the new post by member 7, then an older one by someone else. */
@@ -74,7 +78,7 @@ class GroupsIoPluginTest {
     @Test
     fun `posts a new topic as draft, update, post, signed with the API key, and links to it`() {
         groupsIo()
-        val target = DeliveryTarget(mapOf("group" to "Brulenet", "hashtags" to "announcement", "special" to "true"))
+        val target = target(mapOf("group" to "Brulenet", "hashtags" to "announcement", "special" to "true"))
 
         val result = plugin.deliver(meeting, target)
 
@@ -98,7 +102,7 @@ class GroupsIoPluginTest {
     @Test
     fun `topic settings are set on the topic the post started`() {
         groupsIo()
-        val target = DeliveryTarget(
+        val target = target(
             mapOf("group" to "brulenet", "hashtags" to "announcement", "sticky" to "true", "locked" to "true", "replyTo" to "thread_reply_to_moderators"),
         )
 
@@ -115,7 +119,7 @@ class GroupsIoPluginTest {
     fun `a post that cannot be found, or whose topic settings are refused, is still delivered and says so`() {
         // Only someone else's older message: not ours.
         groupsIo(messages = Response(200, archive(author = 8)))
-        val target = DeliveryTarget(mapOf("group" to "brulenet", "sticky" to "true"))
+        val target = target(mapOf("group" to "brulenet", "sticky" to "true"))
 
         val missing = assertIs<DeliveryResult.Delivered>(plugin.deliver(meeting, target))
         assertEquals("posted to brulenet; not found in the archive, so the topic settings were not applied", missing.detail)
@@ -131,7 +135,7 @@ class GroupsIoPluginTest {
     fun `a post held for approval is delivered and says so, without touching the topic`() {
         groupsIo(post = Response(200, """{"object":"pending post"}"""))
 
-        val held = plugin.deliver(meeting, DeliveryTarget(mapOf("group" to "brulenet", "locked" to "true")))
+        val held = plugin.deliver(meeting, target(mapOf("group" to "brulenet", "locked" to "true")))
 
         assertEquals(DeliveryResult.Delivered("held for moderator approval in brulenet; topic settings not applied"), held)
         assertFalse(server.requests.any { it.path == "/api/v1/getmessages" || it.path == "/api/v1/updatetopic" })
@@ -165,22 +169,29 @@ class GroupsIoPluginTest {
     }
 
     @Test
-    fun `without an API key it is not ready and says what is missing`() {
-        val unconfigured = GroupsIoPlugin().apply { start(FakePluginContext()) }
+    fun `the API key is an instance's, so a target without one fails without calling groups io`() {
+        val keyless = DeliveryTarget(mapOf("group" to "brulenet", "apiBaseUrl" to server.baseUrl))
 
-        assertFalse(unconfigured.status().ready)
-        assertTrue("notify.delivery.settings.groupsio.api-key" in unconfigured.status().reason)
-        assertIs<DeliveryResult.Failed>(unconfigured.deliver(meeting, club))
+        assertEquals(DeliveryResult.Failed("the instance has no API key"), plugin.deliver(meeting, keyless))
+        assertTrue(server.requests.isEmpty())
+    }
+
+    @Test
+    fun `only how it posts can be overridden, never the key or the group`() {
+        val overridable = plugin.fields.filter { it.overridable }.map { it.key }.toSet()
+
+        assertEquals(setOf("hashtags", "special", "fromOwner", "sticky", "locked", "replyTo", "moderated"), overridable)
+        assertTrue(plugin.fields.single { it.key == "apiKey" }.secret)
     }
 
     @Test
     fun `group names, hashtags and the reply choice are checked, and subgroups are not offered`() {
         val problems = plugin.validate(
-            DeliveryTarget(mapOf("group" to "brulenet+events", "hashtags" to "#ok, #not!ok", "replyTo" to "anywhere")),
+            target(mapOf("group" to "brulenet+events", "hashtags" to "#ok, #not!ok", "replyTo" to "anywhere")),
         )
 
         assertEquals(listOf("group", "hashtags", "replyTo"), problems.map { it.field })
-        assertEquals(emptyList(), plugin.validate(DeliveryTarget(mapOf("group" to "brulenet", "replyTo" to "thread_reply_to_sender"))))
-        assertEquals("brulenet #news", plugin.summarize(DeliveryTarget(mapOf("group" to "brulenet", "hashtags" to "news"))))
+        assertEquals(emptyList(), plugin.validate(target(mapOf("group" to "brulenet", "replyTo" to "thread_reply_to_sender"))))
+        assertEquals("brulenet #news", plugin.summarize(target(mapOf("group" to "brulenet", "hashtags" to "news"))))
     }
 }

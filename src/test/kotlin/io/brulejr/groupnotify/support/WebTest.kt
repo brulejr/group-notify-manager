@@ -8,6 +8,11 @@
  */
 package io.brulejr.groupnotify.support
 
+import io.brulejr.groupnotify.instance.InstanceDraft
+import io.brulejr.groupnotify.instance.InstancePort
+import io.brulejr.groupnotify.instance.InstanceResult
+import io.brulejr.groupnotify.instance.InstanceService
+import io.brulejr.groupnotify.instance.PluginInstance
 import io.brulejr.groupnotify.notification.NotificationPort
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
@@ -35,14 +40,32 @@ abstract class WebTest {
     @Autowired
     lateinit var store: NotificationPort
 
+    @Autowired
+    lateinit var instanceStore: InstancePort
+
+    @Autowired
+    lateinit var instances: InstanceService
+
     lateinit var mvc: MockMvc
 
     @BeforeEach
     fun setUpMvc() {
         mvc = MockMvcBuilders.webAppContextSetup(context).apply<DefaultMockMvcBuilder>(springSecurity()).build()
-        // The context, and its in-memory store, outlive each test.
+        // The context, and its in-memory stores, outlive each test.
         store.list(null).forEach { store.delete(it.id) }
+        instanceStore.list(null).forEach { instanceStore.delete(it.id) }
     }
+
+    /**
+     * An instance provisioned by an admin: the log plugin's by default, which sends
+     * nothing anywhere, as no test may reach a real service.
+     */
+    fun provision(
+        name: String = "Club log",
+        plugin: String = "log",
+        config: Map<String, String> = mapOf("body" to "subject"),
+        group: String = "notify_club",
+    ): PluginInstance = (instances.create(InstanceDraft(group, plugin, name, config), TestUsers.admin) as InstanceResult.Saved).instance
 
     /** Signs the request in as [user], in [groups], as Authelia's forward-auth would. */
     fun MockHttpServletRequestBuilder.signedIn(user: String, vararg groups: String): MockHttpServletRequestBuilder =

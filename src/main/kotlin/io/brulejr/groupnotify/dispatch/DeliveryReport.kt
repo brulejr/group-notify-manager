@@ -11,10 +11,15 @@ package io.brulejr.groupnotify.dispatch
 import io.brulejr.groupnotify.delivery.DeliveryOutcome
 import io.brulejr.groupnotify.notification.NotificationDelivery
 
-/** What came of one delivery of a send. */
+/**
+ * What came of one delivery of a send.
+ *
+ * @property name the instance's name, e.g. `Club announcements`.
+ * @property summary where it went, never a secret.
+ */
 data class DeliveryReport(
     val delivery: NotificationDelivery,
-    val pluginName: String,
+    val name: String,
     val summary: String,
     val outcome: DeliveryOutcome,
 )

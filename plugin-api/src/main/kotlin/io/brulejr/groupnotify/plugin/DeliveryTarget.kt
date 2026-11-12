@@ -9,8 +9,9 @@
 package io.brulejr.groupnotify.plugin
 
 /**
- * Where one delivery goes: the values entered for a plugin's [DeliveryPlugin.fields],
- * keyed by [PluginField.key]. A field left blank is absent.
+ * Where one delivery goes and how: an instance's values for the plugin's
+ * [DeliveryPlugin.fields] with the notification's overrides applied, keyed by
+ * [PluginField.key], secrets in the clear. A field left blank is absent.
  */
 data class DeliveryTarget(val values: Map<String, String>) {
 

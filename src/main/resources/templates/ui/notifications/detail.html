@@ -116,15 +116,17 @@
             <li class="list-group-item delivery-item" th:each="d : ${deliveries}" th:classappend="${!d.enabled} ? 'opacity-50'">
               <i class="bi plugin-icon" th:classappend="'bi-' + ${d.icon}"></i>
               <div class="min-w-0 flex-grow-1">
-                <div class="fw-medium"><span th:text="${d.label != null and !#strings.isEmpty(d.label)} ? ${d.label} : ${d.pluginName}">Discord</span>
+                <div class="fw-medium"><span th:text="${d.name}">Club announcements</span>
                   <span class="badge text-bg-secondary ms-1" th:unless="${d.enabled}">disabled</span>
                   <span class="badge text-bg-warning ms-1" th:unless="${d.ready}" th:title="${d.reason}">not ready</span></div>
                 <div class="small text-body-secondary text-truncate" th:text="${d.pluginName} + ' · ' + ${d.summary}">summary</div>
+                <div class="small text-body-secondary" th:unless="${d.overridden.isEmpty()}">
+                  <i class="bi bi-sliders me-1"></i>Set for this notification: <span th:text="${#strings.listJoin(d.overridden, ', ')}">Hashtags</span></div>
               </div>
               <button type="button" class="btn btn-sm btn-outline-secondary" th:if="${canEdit}" title="Send through this delivery only"
                       hx-swap="none" data-confirm-label="Send test"
                       th:hx-post="@{/ui/notifications/{id}/send(id=${n.id}, deliveryId=${d.id})}"
-                      th:hx-confirm="'Send ' + ${n.title} + ' now through ' + ${d.pluginName} + ' (' + ${d.summary} + ') only?'">Test</button>
+                      th:hx-confirm="'Send ' + ${n.title} + ' now through ' + ${d.name} + ' (' + ${d.pluginName} + ', ' + ${d.summary} + ') only?'">Test</button>
             </li>
           </ul>
         </div>

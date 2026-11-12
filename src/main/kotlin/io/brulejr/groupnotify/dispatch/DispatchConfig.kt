@@ -12,6 +12,7 @@ import io.brulejr.groupnotify.audit.AuditService
 import io.brulejr.groupnotify.content.ContentService
 import io.brulejr.groupnotify.delivery.DeliveryService
 import io.brulejr.groupnotify.group.GroupService
+import io.brulejr.groupnotify.instance.InstanceService
 import io.brulejr.groupnotify.notification.NotificationService
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
@@ -26,12 +27,13 @@ class DispatchConfig {
     fun dispatchService(
         notifications: NotificationService,
         deliveries: DeliveryService,
+        instances: InstanceService,
         content: ContentService,
         audit: AuditService,
         groups: GroupService,
         datafill: DispatchDatafill,
         clock: Clock,
-    ) = DispatchService(notifications, deliveries, content, audit, groups, datafill, clock)
+    ) = DispatchService(notifications, deliveries, instances, content, audit, groups, datafill, clock)
 
     /** The schedule itself. Off, nothing is sent unless someone presses Send now. */
     @Bean

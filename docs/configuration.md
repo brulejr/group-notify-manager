@@ -7,12 +7,9 @@ upper case (`notify.dispatch.misfire-grace` → `NOTIFY_DISPATCH_MISFIRE_GRACE`)
 
 ## Secrets and `.env`
 
-`scripts/bootstrap.sh` writes the PostgreSQL passwords to `.env` (gitignored). Add
-the rest by hand:
-
-```properties
-GROUPSIO_API_KEY=<from https://groups.io/settings/apikeys>
-```
+`scripts/bootstrap.sh` writes the PostgreSQL passwords and `NOTIFY_SECRET_KEY`, which
+encrypts delivery instances' secrets, to `.env` (gitignored). Plugin credentials are
+not configuration: an admin enters them on each delivery instance in the console.
 
 `application-local.yml` (copy `application-local.example.yml`; gitignored, and left out
 of the boot jar) imports `.env` and sets the development user.
@@ -35,6 +32,8 @@ of the boot jar) imports `.env` and sets the development user.
 | `notify.notifications.max-deliveries` | | 10 | |
 | `notify.audit.store` | `AUDIT_STORE` | `postgres` | or `memory` |
 | `notify.audit.retention` | | 365d | |
+| `notify.instances.store` | `INSTANCE_STORE` | `postgres` | or `memory` |
+| `notify.instances.secret-key` | `NOTIFY_SECRET_KEY` | none: a key for the run | 32 bytes in base64; encrypts instance secrets. Back it up |
 | `notify.dispatch.enabled` | | true | Off: nothing is sent on schedule |
 | `notify.dispatch.poll-interval` | | 15s | |
 | `notify.dispatch.misfire-grace` | | 1h | A later run is skipped, not sent |

@@ -25,7 +25,7 @@ import java.util.UUID
 @RestController
 class DispatchController(private val dispatch: DispatchService) {
 
-    data class DeliveryReportView(val deliveryId: UUID, val plugin: String, val summary: String, val delivered: Boolean, val detail: String, val attempts: Int)
+    data class DeliveryReportView(val deliveryId: UUID, val instance: UUID, val instanceName: String, val summary: String, val delivered: Boolean, val detail: String, val attempts: Int)
 
     /** Sends a notification now, or only one of its deliveries; its schedule is left alone. */
     @PostMapping("/api/notifications/{id}/send")
@@ -33,7 +33,7 @@ class DispatchController(private val dispatch: DispatchService) {
         when (val result = dispatch.sendNow(id, user, deliveryId)) {
             is SendResult.Sent -> ResponseEntity.ok(
                 result.reports.map {
-                    DeliveryReportView(it.delivery.id, it.delivery.plugin, it.summary, it.outcome.delivered, it.outcome.detail, it.outcome.attempts)
+                    DeliveryReportView(it.delivery.id, it.delivery.instance, it.name, it.summary, it.outcome.delivered, it.outcome.detail, it.outcome.attempts)
                 },
             )
             SendResult.NotFound -> ResponseEntity.notFound().build()

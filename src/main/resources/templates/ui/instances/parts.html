@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<!--/* Delivery instances, fetched on their own into the Delivery plugins page. Never rendered as a page. */-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="list" class="instance-list">
+  <div class="alert alert-warning small" th:if="${canManage and ephemeralKey}">
+    <i class="bi bi-exclamation-triangle me-1"></i><code>NOTIFY_SECRET_KEY</code> is not set, so instance secrets are encrypted with a key
+    for this run only. Set it (<code>openssl rand -base64 32</code>) before storing real credentials.</div>
+  <p class="text-body-secondary" th:if="${byGroup.isEmpty()}">
+    No delivery instances yet.<th:block th:if="${canManage}"> Set one up from a plugin below.</th:block>
+    <th:block th:unless="${canManage}"> An admin sets them up for each group.</th:block></p>
+  <div class="card mb-4" th:each="entry : ${byGroup}">
+    <div class="card-header"><i class="bi bi-people"></i><span th:text="${groupNames.get(entry.key) ?: entry.key}">Radio Club</span>
+      <span class="mono small text-body-secondary fw-normal ms-1" th:text="${entry.key}">notify_club</span>
+      <a th:if="${canManage}" class="btn btn-sm btn-outline-primary ms-auto" th:href="@{/ui/instances/new(group=${entry.key})}">
+        <i class="bi bi-plus-lg me-1"></i>New instance</a></div>
+    <ul class="list-group list-group-flush">
+      <li class="list-group-item delivery-item" th:each="r : ${entry.value}">
+        <i class="bi plugin-icon" th:classappend="'bi-' + ${r.icon}"></i>
+        <div class="min-w-0 flex-grow-1">
+          <div class="fw-medium"><span th:text="${r.instance.name}">Club announcements</span>
+            <span class="badge text-bg-warning ms-1" th:unless="${r.ready}" th:title="${r.reason}">not ready</span></div>
+          <div class="small text-body-secondary text-truncate" th:text="${r.pluginName} + ' · ' + ${r.summary}">groups.io · brulenet</div>
+          <div class="small text-body-secondary"
+               th:text="${r.usedBy.isEmpty()} ? 'Not used by any notification' : 'Used by ' + ${r.usedBy.size()} + ' notification' + (${r.usedBy.size() == 1} ? '' : 's')"
+               th:title="${#strings.listJoin(r.usedBy, ', ')}">used by</div>
+        </div>
+        <th:block th:if="${canManage}">
+          <a class="btn btn-sm btn-outline-secondary" th:href="@{/ui/instances/{id}/edit(id=${r.instance.id})}" title="Edit"><i class="bi bi-pencil"></i></a>
+          <button type="button" class="btn btn-sm btn-outline-danger" title="Delete" hx-swap="none" data-confirm-label="Delete"
+                  th:hx-delete="@{/ui/instances/{id}(id=${r.instance.id})}"
+                  th:hx-confirm="'Delete ' + ${r.instance.name} + '? Its credentials are deleted with it.'"><i class="bi bi-trash"></i></button>
+        </th:block>
+      </li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

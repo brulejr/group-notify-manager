@@ -41,6 +41,11 @@ ensure_env POSTGRES_ADMIN_PASSWORD "$(password)"
 ensure_env POSTGRES_APP_USERNAME group_notify
 ensure_env POSTGRES_APP_PASSWORD "$(password)"
 
+echo "Delivery instances:"
+# Encrypts the credentials admins enter on delivery instances (AES-256-GCM). Losing it
+# means re-entering them, so back it up with the database.
+ensure_env NOTIFY_SECRET_KEY "$(openssl rand -base64 32)"
+
 echo
 echo "Secrets are in .env, which is gitignored. Keep it out of version control."
 echo "SMTP and other plugin settings are added to .env by hand; see docs/configuration.md."

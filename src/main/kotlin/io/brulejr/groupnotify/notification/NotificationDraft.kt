@@ -34,14 +34,14 @@ data class NotificationDraft(
     val paused: Boolean = false,
 ) {
     /**
-     * @property id the stored delivery this replaces, so its secrets carry over when
-     *   left blank; null for a new one.
+     * @property id the stored delivery this replaces, so it keeps its id; null for a new one.
+     * @property instance the id of one of the group's plugin instances.
+     * @property overrides values for the plugin's overridable fields; any other is ignored.
      */
     data class Delivery(
         val id: String? = null,
-        val plugin: String,
-        val target: Map<String, String> = emptyMap(),
-        val label: String = "",
+        val instance: String,
+        val overrides: Map<String, String> = emptyMap(),
         val enabled: Boolean = true,
     )
 }

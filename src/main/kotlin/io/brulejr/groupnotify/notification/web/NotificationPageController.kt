@@ -15,10 +15,12 @@ import io.brulejr.groupnotify.console.web.Toast
 import io.brulejr.groupnotify.content.ContentService
 import io.brulejr.groupnotify.content.Placeholders
 import io.brulejr.groupnotify.delivery.DeliveryService
-import io.brulejr.groupnotify.delivery.PluginDescriptor
+import io.brulejr.groupnotify.delivery.web.FieldInput
 import io.brulejr.groupnotify.dispatch.DispatchService
 import io.brulejr.groupnotify.dispatch.SendResult
 import io.brulejr.groupnotify.group.GroupService
+import io.brulejr.groupnotify.instance.InstanceService
+import io.brulejr.groupnotify.instance.PluginInstance
 import io.brulejr.groupnotify.notification.BodyFormat
 import io.brulejr.groupnotify.notification.CronSpec
 import io.brulejr.groupnotify.notification.Notification
@@ -29,7 +31,6 @@ import io.brulejr.groupnotify.notification.NotificationService
 import io.brulejr.groupnotify.notification.NotificationStatus
 import io.brulejr.groupnotify.notification.Schedule
 import io.brulejr.groupnotify.notification.ScheduleKind
-import io.brulejr.groupnotify.plugin.FieldType
 import io.brulejr.groupnotify.security.NotifyUser
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.http.HttpStatus
@@ -60,6 +61,7 @@ import java.util.UUID
 class NotificationPageController(
     private val notifications: NotificationService,
     private val deliveries: DeliveryService,
+    private val instances: InstanceService,
     private val dispatch: DispatchService,
     private val content: ContentService,
     private val audit: AuditService,
@@ -136,15 +138,15 @@ class NotificationPageController(
     fun edit(user: NotifyUser, @PathVariable id: UUID, model: Model): String {
         val notification = find(id, user)
         if (!notifications.canEdit(user, notification)) throw ResponseStatusException(HttpStatus.FORBIDDEN, "You may not change this notification")
-        formModel(user, notification, NotificationForm.of(notification, deliveries::mask), emptyList(), model)
+        formModel(user, notification, NotificationForm.of(notification), emptyList(), model)
         return "ui/notifications/form"
     }
 
-    /** A copy to start a new one from: everything but the secrets, which are not copied. */
+    /** A copy to start a new one from, through the same instances. */
     @GetMapping("/{id}/copy")
     fun copy(user: NotifyUser, @PathVariable id: UUID, model: Model): String {
         val original = find(id, user)
-        val form = NotificationForm.of(original) { plugin, target -> deliveries.mask(plugin, target).filterValues { it != DeliveryService.MASK } }
+        val form = NotificationForm.of(original)
         formModel(user, null, form.copy(title = "${form.title} (copy)", deliveries = form.deliveries.map { it.copy(id = "") }), emptyList(), model)
         return "ui/notifications/form"
     }
@@ -157,12 +159,19 @@ class NotificationPageController(
     fun update(user: NotifyUser, @PathVariable id: UUID, @RequestParam params: MultiValueMap<String, String>, model: Model, response: HttpServletResponse): String =
         submit(user, find(id, user), params, model, response)
 
-    /** A new delivery row for [plugin], numbered [index]. */
+    /** A new delivery row through [instance], numbered [index]; the instance must be in a group [user] may see. */
     @GetMapping("/delivery")
-    fun deliveryRow(@RequestParam plugin: String, @RequestParam index: Int, model: Model): String {
-        val descriptor = deliveries.plugin(plugin) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "No plugin $plugin")
-        model.addAttribute("row", deliveryRow(index, NotificationForm.Delivery(plugin = plugin, values = defaults(descriptor)), descriptor, emptyMap()))
+    fun deliveryRow(user: NotifyUser, @RequestParam instance: UUID, @RequestParam index: Int, model: Model): String {
+        val chosen = instances.find(instance, user) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "No such delivery instance")
+        model.addAttribute("row", deliveryRow(index, NotificationForm.Delivery(instance = chosen.id.toString()), emptyMap()))
         return "ui/notifications/parts :: delivery"
+    }
+
+    /** The Add delivery menu: [group]'s instances. Fetched again whenever the form's group changes. */
+    @GetMapping("/instances")
+    fun instanceMenu(user: NotifyUser, @RequestParam(defaultValue = "") group: String, model: Model): String {
+        menuModel(user, group, model)
+        return "ui/notifications/parts :: instanceMenu"
     }
 
     /** The next few runs of a schedule as typed, or why it has none. */
@@ -214,12 +223,12 @@ class NotificationPageController(
         val toast = when (val result = dispatch.sendNow(id, user, deliveryId)) {
             is SendResult.Sent -> when {
                 result.failed == 0 -> Toast.success(
-                    if (result.reports.size == 1) "Sent via ${result.reports.single().pluginName}" else "Sent through ${result.reports.size} deliveries",
+                    if (result.reports.size == 1) "Sent via ${result.reports.single().name}" else "Sent through ${result.reports.size} deliveries",
                 )
-                result.failed == result.reports.size -> Toast.danger("Not sent: " + result.reports.joinToString("; ") { "${it.pluginName}: ${it.outcome.detail}" })
+                result.failed == result.reports.size -> Toast.danger("Not sent: " + result.reports.joinToString("; ") { "${it.name}: ${it.outcome.detail}" })
                 else -> Toast.warning(
                     "Sent through ${result.reports.size - result.failed} of ${result.reports.size}; " +
-                        result.reports.filter { !it.outcome.delivered }.joinToString("; ") { "${it.pluginName}: ${it.outcome.detail}" },
+                        result.reports.filter { !it.outcome.delivered }.joinToString("; ") { "${it.name}: ${it.outcome.detail}" },
                 )
             }
             SendResult.NotFound -> Toast.danger("No such notification")
@@ -293,10 +302,23 @@ class NotificationPageController(
         NotificationRow(n, groups.displayName(n.group), notifications.canEdit(user, n), badges(n).toMutableList())
 
     private fun badges(n: Notification) = n.deliveries.map { d ->
-        val plugin = deliveries.plugin(d.plugin)
+        val instance = instances.get(d.instance)
+        val plugin = instance?.let { deliveries.plugin(it.plugin) }
+        val labels = plugin?.fields.orEmpty().associate { it.key to it.label }
         DeliveryBadge(
-            d.id, d.plugin, plugin?.name ?: d.plugin, plugin?.icon ?: "question-circle", d.label,
-            deliveries.summarize(d.plugin, d.target), d.enabled, plugin?.ready ?: false, plugin?.reason ?: "not installed",
+            id = d.id,
+            name = instance?.name ?: "Deleted instance",
+            pluginName = plugin?.name ?: instance?.plugin ?: "unknown",
+            icon = plugin?.icon ?: "question-circle",
+            summary = instance?.let(instances::summary) ?: "it no longer exists",
+            overridden = d.overrides.keys.map { labels[it] ?: it }.toMutableList(),
+            enabled = d.enabled,
+            ready = instance != null && plugin?.ready == true,
+            reason = when {
+                instance == null -> "its instance was deleted"
+                plugin == null -> "${instance.plugin} is not installed"
+                else -> plugin.reason
+            },
         )
     }
 
@@ -316,14 +338,7 @@ class NotificationPageController(
 
     private fun formModel(user: NotifyUser, existing: Notification?, form: NotificationForm, problems: List<NotificationProblem>, model: Model) {
         val errors = problems.associate { it.field to it.reason }
-        val plugins = deliveries.plugins()
-        val pluginsById = plugins.associateBy { it.id }
-        val storedSecrets = existing?.deliveries.orEmpty().associate { it.id.toString() to it.target }
-        val rows = form.deliveries.mapIndexedNotNull { index, delivery ->
-            pluginsById[delivery.plugin]?.let { plugin ->
-                deliveryRow(index, delivery, plugin, errors, storedSecrets[delivery.id].orEmpty())
-            }
-        }
+        val rows = form.deliveries.mapIndexed { index, delivery -> deliveryRow(index, delivery, errors) }
         val editable = groups.editable(user, notifications.groupsInUse()).toMutableList()
         if (form.group.isNotBlank() && form.group !in editable) editable += form.group
         model.addAttribute("existing", existing)
@@ -331,7 +346,7 @@ class NotificationPageController(
         model.addAttribute("errors", HashMap(errors))
         model.addAttribute("deliveryErrors", errors.filterKeys { it == "deliveries" }.values.toMutableList())
         model.addAttribute("rows", rows.toMutableList())
-        model.addAttribute("plugins", plugins.toMutableList())
+        menuModel(user, form.group, model)
         model.addAttribute("editableGroups", editable)
         model.addAttribute("formats", BodyFormat.entries.toMutableList())
         model.addAttribute("kinds", ScheduleKind.entries.toMutableList())
@@ -341,30 +356,48 @@ class NotificationPageController(
         model.addAttribute("isAdmin", user.admin)
     }
 
-    private fun deliveryRow(
-        index: Int,
-        delivery: NotificationForm.Delivery,
-        plugin: PluginDescriptor,
-        errors: Map<String, String>,
-        stored: Map<String, String> = emptyMap(),
-    ): DeliveryRow {
-        val inputs = plugin.fields.map { field ->
-            val value = delivery.values[field.key].orEmpty()
-            val saved = field.secret && (value == DeliveryService.MASK || (value.isBlank() && !stored[field.key].isNullOrBlank()))
-            FieldInput(
-                field = field,
-                name = "deliveries[$index].target.${field.key}",
-                inputId = "d$index-${field.key}",
-                value = if (field.secret) "" else value,
-                saved = saved,
-                error = errors["deliveries[$index].target.${field.key}"],
-            )
-        }
-        return DeliveryRow(index, delivery.id, plugin, delivery.label, delivery.enabled, inputs.toMutableList(), errors["deliveries[$index].plugin"])
+    /** The Add delivery menu's model: the instances of [group], if [user] may see it. */
+    private fun menuModel(user: NotifyUser, group: String, model: Model) {
+        val choices = if (group.isBlank() || !groups.canView(user, group)) emptyList() else instances.forGroup(group)
+        val plugins = deliveries.plugins().associateBy { it.id }
+        model.addAttribute("menuGroup", group)
+        model.addAttribute("instances", choices.map { InstanceChoice(it.id, it.name, plugins[it.plugin]?.name ?: it.plugin, plugins[it.plugin]?.icon ?: "send", instances.summary(it)) }.toMutableList())
+        model.addAttribute("canProvision", instances.canManage(user))
     }
 
-    private fun defaults(plugin: PluginDescriptor) = plugin.fields.filter { it.defaultValue.isNotEmpty() || it.type == FieldType.CHECKBOX }
-        .associate { it.key to it.defaultValue }
+    /**
+     * One row: the instance's name and where it sends, and an input for each overridable
+     * field showing what this notification will use, its own value or the instance's.
+     */
+    private fun deliveryRow(index: Int, delivery: NotificationForm.Delivery, errors: Map<String, String>): DeliveryRow {
+        val error = errors["deliveries[$index].instance"]
+        val instance: PluginInstance? = runCatching { UUID.fromString(delivery.instance) }.getOrNull()?.let(instances::get)
+        val plugin = instance?.let { deliveries.plugin(it.plugin) }
+        if (instance == null || plugin == null) {
+            return DeliveryRow(
+                index, delivery.id, delivery.instance, if (instance == null) "Deleted instance" else instance.name, plugin,
+                if (instance == null) "it no longer exists: remove this delivery" else "${instance.plugin} is not installed",
+                delivery.enabled, mutableListOf(), error,
+            )
+        }
+        val effective = instances.effective(instance, delivery.overrides)
+        val own = instances.overrides(instance, delivery.overrides)
+        val inputs = plugin.fields.filter { it.overridable }.map { field ->
+            FieldInput(
+                field = field,
+                name = "deliveries[$index].overrides.${field.key}",
+                inputId = "d$index-${field.key}",
+                value = delivery.overrides[field.key] ?: effective[field.key].orEmpty(),
+                saved = false,
+                error = errors["deliveries[$index].overrides.${field.key}"],
+                note = if (field.key in own) "Set for this notification" else null,
+            )
+        }
+        return DeliveryRow(
+            index, delivery.id, instance.id.toString(), instance.name, plugin, instances.summary(instance),
+            delivery.enabled, inputs.toMutableList(), error,
+        )
+    }
 
     private companion object {
         /** The zones offered first; any IANA zone can be typed. */

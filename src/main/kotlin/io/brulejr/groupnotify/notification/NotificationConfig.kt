@@ -9,8 +9,9 @@
 package io.brulejr.groupnotify.notification
 
 import io.brulejr.groupnotify.audit.AuditService
-import io.brulejr.groupnotify.delivery.DeliveryService
 import io.brulejr.groupnotify.group.GroupService
+import io.brulejr.groupnotify.instance.InstanceService
+import io.brulejr.groupnotify.instance.InstanceUsage
 import io.brulejr.groupnotify.notification.postgres.PostgresNotificationStore
 import io.brulejr.groupnotify.platform.DatabaseMigrator
 import io.brulejr.groupnotify.platform.StoreType
@@ -23,7 +24,7 @@ import org.springframework.transaction.support.TransactionTemplate
 import tools.jackson.databind.json.JsonMapper
 import java.time.Clock
 
-/** Notifications and their deliveries: where they are kept and who may change them. */
+/** Notifications and their deliveries: where they are kept, who may change them, and which instances they use. */
 @Configuration
 class NotificationConfig {
 
@@ -43,15 +44,21 @@ class NotificationConfig {
         StoreType.MEMORY -> InMemoryNotificationStore()
     }
 
+    /** Which notifications send through an instance, so an instance in use is not deleted. */
+    @Bean
+    fun instanceUsage(store: NotificationPort) = InstanceUsage { id ->
+        store.list(null).filter { n -> n.deliveries.any { it.instance == id } }.map { it.title }
+    }
+
     @Bean
     fun notificationService(
         store: NotificationPort,
         groups: GroupService,
-        deliveries: DeliveryService,
+        instances: InstanceService,
         audit: AuditService,
         datafill: NotificationDatafill,
         clock: Clock,
-    ) = NotificationService(store, groups, deliveries, audit, datafill, clock)
+    ) = NotificationService(store, groups, instances, audit, datafill, clock)
 
     @Bean
     fun notificationHealthIndicator(store: NotificationPort, clock: Clock) = NotificationHealthIndicator(store, clock)

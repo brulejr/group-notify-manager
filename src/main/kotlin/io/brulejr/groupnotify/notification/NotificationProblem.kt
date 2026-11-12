@@ -10,6 +10,7 @@ package io.brulejr.groupnotify.notification
 
 /**
  * One thing wrong with a draft. A delivery's field is named by its index and key, e.g.
- * `deliveries[1].target.webhookUrl`, so the console can show it against that input.
+ * `deliveries[1].overrides.hashtags`, or `deliveries[1].instance` for the instance
+ * itself, so the console can show it against that input.
  */
 data class NotificationProblem(val field: String, val reason: String)

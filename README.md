@@ -36,8 +36,11 @@ flowchart LR
   it suits: sanitised HTML for groups.io, Markdown for Discord, plain text for
   plugins that need it.
   Placeholders such as `{{date}}` are filled in when it is sent.
-- **Deliveries are plugins.** groups.io and Discord are bundled; a new one
-  is a jar implementing a small, dependency-free interface, dropped into `plugins-dir/`.
+- **Deliveries are plugins, set up per group.** groups.io and Discord are bundled; a
+  new one is a jar implementing a small, dependency-free interface, dropped into
+  `plugins-dir/`. An admin provisions a plugin for a group as a named instance, holding
+  its credentials (encrypted at rest) and defaults; a notification picks its group's
+  instances and may change only how they post.
 - **The audit trail** records every change and every delivery, with its outcome.
 
 ## Status

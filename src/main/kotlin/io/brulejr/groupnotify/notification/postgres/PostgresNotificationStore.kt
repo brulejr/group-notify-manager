@@ -28,7 +28,7 @@ import java.util.UUID
 
 /**
  * PostgreSQL-backed [NotificationPort]: the `notifications` table, with each one's
- * deliveries in `deliveries`, their targets as `jsonb`.
+ * deliveries in `deliveries`, each naming its instance, with its overrides as `jsonb`.
  */
 class PostgresNotificationStore(
     private val jdbc: JdbcClient,
@@ -84,17 +84,16 @@ class PostgresNotificationStore(
             notification.deliveries.forEachIndexed { position, delivery ->
                 jdbc.sql(
                     """
-                    INSERT INTO deliveries (id, notification_id, position, plugin, label, enabled, target)
-                    VALUES (:id, :notificationId, :position, :plugin, :label, :enabled, CAST(:target AS jsonb))
+                    INSERT INTO deliveries (id, notification_id, position, instance_id, enabled, overrides)
+                    VALUES (:id, :notificationId, :position, :instance, :enabled, CAST(:overrides AS jsonb))
                     """,
                 )
                     .param("id", delivery.id)
                     .param("notificationId", notification.id)
                     .param("position", position)
-                    .param("plugin", delivery.plugin)
-                    .param("label", delivery.label)
+                    .param("instance", delivery.instance)
                     .param("enabled", delivery.enabled)
-                    .param("target", json.writeValueAsString(delivery.target))
+                    .param("overrides", json.writeValueAsString(delivery.overrides))
                     .update()
             }
         }
@@ -164,13 +163,12 @@ class PostgresNotificationStore(
 
     private fun ResultSet.toDelivery() = NotificationDelivery(
         id = getObject("id", UUID::class.java),
-        plugin = getString("plugin"),
-        target = json.readValue(getString("target"), TARGET),
-        label = getString("label"),
+        instance = getObject("instance_id", UUID::class.java),
+        overrides = json.readValue(getString("overrides"), OVERRIDES),
         enabled = getBoolean("enabled"),
     )
 
     private companion object {
-        val TARGET = object : TypeReference<Map<String, String>>() {}
+        val OVERRIDES = object : TypeReference<Map<String, String>>() {}
     }
 }

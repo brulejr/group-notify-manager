@@ -6,14 +6,16 @@
  *
  * SPDX-License-Identifier: MIT
  */
-package io.brulejr.groupnotify.notification.web
+package io.brulejr.groupnotify.delivery.web
 
 import io.brulejr.groupnotify.plugin.PluginField
 
 /**
- * One input of a delivery row.
+ * One input for a plugin field, on an instance's form or as a notification's override,
+ * drawn by `ui/plugins/fields :: field`.
  *
  * @property saved a secret is stored for it: the input is empty, and left so keeps it.
+ * @property note shown under the input, e.g. that a notification may override it.
  */
 data class FieldInput(
     val field: PluginField,
@@ -22,4 +24,5 @@ data class FieldInput(
     val value: String,
     val saved: Boolean,
     val error: String?,
+    val note: String? = null,
 )

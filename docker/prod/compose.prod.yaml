@@ -36,7 +36,7 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:-}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-}
-      GROUPSIO_API_KEY: ${GROUPSIO_API_KEY:-}
+      NOTIFY_SECRET_KEY: ${NOTIFY_SECRET_KEY:?run scripts/bootstrap.sh first}
     ports:
       - "${APP_BIND_IP:-127.0.0.1}:${APP_PORT:-5002}:5002"
     volumes:

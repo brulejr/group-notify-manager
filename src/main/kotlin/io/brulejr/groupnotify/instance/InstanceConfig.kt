@@ -59,12 +59,12 @@ class InstanceConfig {
         store: InstancePort,
         deliveries: DeliveryService,
         groups: GroupService,
-        usage: InstanceUsage,
+        usages: List<InstanceUsage>,
         audit: AuditService,
         cipher: SecretCipher,
         datafill: InstanceDatafill,
         clock: Clock,
-    ) = InstanceService(store, deliveries, groups, usage, audit, cipher, datafill, clock)
+    ) = InstanceService(store, deliveries, groups, usages, audit, cipher, datafill, clock)
 
     @Bean
     fun instanceHealthIndicator(store: InstancePort, cipher: SecretCipher, datafill: InstanceDatafill) =

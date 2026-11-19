@@ -57,6 +57,8 @@
       <a th:href="@{/ui/notifications/new}" class="nav-link" th:classappend="${active == 'new'} ? 'active'"
          th:if="${canCreate}">
         <i class="bi bi-plus-circle"></i><span>New notification</span></a>
+      <a th:href="@{/ui/events}" class="nav-link" th:classappend="${active == 'events'} ? 'active'">
+        <i class="bi bi-calendar-event"></i><span>Events</span></a>
       <a th:href="@{/ui/history}" class="nav-link" th:classappend="${active == 'history'} ? 'active'">
         <i class="bi bi-clock-history"></i><span>History</span></a>
       <div class="console-nav-label">Setup</div>

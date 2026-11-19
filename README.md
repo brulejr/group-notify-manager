@@ -36,6 +36,10 @@ flowchart LR
   it suits: sanitised HTML for groups.io, Markdown for Discord, plain text for
   plugins that need it.
   Placeholders such as `{{date}}` are filled in when it is sent.
+- **Events** sit beside notifications: a group's meetings or nets, once or recurring,
+  with properties their words can use (`{{event.location}}`), any number of reminders
+  relative to each occurrence (a week before, an hour before, at the start), and a note
+  for any one occurrence.
 - **Deliveries are plugins, set up per group.** groups.io and Discord are bundled; a
   new one is a jar implementing a small, dependency-free interface, dropped into
   `plugins-dir/`. A group's members provision a plugin for their group as a named instance, holding

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<!--/* Rows of the event form fetched on their own: a property and a reminder. Never rendered as a page. */-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--/* One property: a name and a value. */-->
+<div th:fragment="property" class="row g-2 align-items-start mb-2" data-row th:with="i=${p.index}">
+  <div class="col-4">
+    <input class="form-control mono" th:name="'properties[' + ${i} + '].name'" th:value="${p.name}" placeholder="name, e.g. location"
+           aria-label="Name" maxlength="40" th:classappend="${p.nameError != null} ? 'is-invalid'">
+    <div class="invalid-feedback" th:text="${p.nameError}"></div>
+  </div>
+  <div class="col">
+    <input class="form-control" th:name="'properties[' + ${i} + '].value'" th:value="${p.value}" placeholder="value, e.g. Town hall"
+           aria-label="Value" maxlength="500" th:classappend="${p.valueError != null} ? 'is-invalid'">
+    <div class="invalid-feedback" th:text="${p.valueError}"></div>
+  </div>
+  <div class="col-auto">
+    <button type="button" class="btn btn-outline-danger" data-remove-row title="Remove this property" aria-label="Remove"><i class="bi bi-x-lg"></i></button>
+  </div>
+</div>
+
+<!--/* One reminder: how long before or after each occurrence, and optionally its own words. */-->
+<div th:fragment="reminder" class="card reminder-card mb-2" data-row th:with="i=${r.index}">
+  <input type="hidden" th:name="'reminders[' + ${i} + '].id'" th:value="${r.id}">
+  <div class="card-body py-2">
+    <div class="row g-2 align-items-center">
+      <div class="col-3 col-md-2">
+        <input class="form-control" type="number" min="1" th:name="'reminders[' + ${i} + '].amount'" th:value="${r.amount}"
+               aria-label="How many" th:classappend="${r.amountError != null} ? 'is-invalid'">
+      </div>
+      <div class="col-4 col-md-3">
+        <select class="form-select" th:name="'reminders[' + ${i} + '].unit'" aria-label="Unit">
+          <option th:each="u : ${units}" th:value="${u}" th:text="${u.plural}" th:selected="${u == r.unit}">days</option>
+        </select>
+      </div>
+      <div class="col-5 col-md-3">
+        <select class="form-select" th:name="'reminders[' + ${i} + '].timing'" aria-label="When">
+          <option th:each="t : ${timings}" th:value="${t}" th:text="${t.label}" th:selected="${t == r.timing}">before</option>
+        </select>
+      </div>
+      <div class="col-auto form-check form-switch mb-0 ms-md-2" title="A disabled reminder is kept but not sent">
+        <input type="hidden" th:name="'reminders[' + ${i} + '].enabled'" value="false">
+        <input class="form-check-input" type="checkbox" role="switch" th:id="'r' + ${i} + '-enabled'" th:name="'reminders[' + ${i} + '].enabled'"
+               value="true" th:checked="${r.enabled}">
+        <label class="form-check-label small" th:for="'r' + ${i} + '-enabled'">On</label>
+      </div>
+      <div class="col-auto ms-auto">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" th:attr="data-bs-target='#r' + ${i} + '-words'"
+                title="Its own subject and body"><i class="bi bi-chat-left-text"></i></button>
+        <button type="button" class="btn btn-sm btn-outline-danger" data-remove-row title="Remove this reminder" aria-label="Remove"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="col-12 invalid-feedback d-block" th:if="${r.amountError != null}" th:text="${r.amountError}"></div>
+    </div>
+    <div class="collapse mt-2" th:id="'r' + ${i} + '-words'"
+         th:classappend="${!#strings.isEmpty(r.subject) or !#strings.isEmpty(r.body) or r.subjectError != null or r.bodyError != null} ? 'show'">
+      <input class="form-control mb-2" th:name="'reminders[' + ${i} + '].subject'" th:value="${r.subject}" maxlength="300"
+             placeholder="Its own subject, e.g. Starting {{event.when}} (blank: the event's)" th:classappend="${r.subjectError != null} ? 'is-invalid'">
+      <div class="invalid-feedback" th:text="${r.subjectError}"></div>
+      <textarea class="form-control" rows="3" th:name="'reminders[' + ${i} + '].body'" th:text="${r.body}"
+                placeholder="Its own body, in Markdown (blank: the event's)" th:classappend="${r.bodyError != null} ? 'is-invalid'"></textarea>
+      <div class="invalid-feedback" th:text="${r.bodyError}"></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

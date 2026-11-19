@@ -10,6 +10,8 @@ package io.brulejr.groupnotify.notification.web
 
 import io.brulejr.groupnotify.notification.BodyFormat
 import io.brulejr.groupnotify.notification.Notification
+import io.brulejr.groupnotify.notification.NotificationDelivery
+import io.brulejr.groupnotify.notification.Schedule
 import io.brulejr.groupnotify.notification.NotificationDraft
 import io.brulejr.groupnotify.notification.NotificationProblem
 import io.brulejr.groupnotify.notification.ScheduleKind
@@ -105,20 +107,31 @@ data class NotificationForm(
         }
 
         /** A stored notification as the form shows it. It holds no secret: those stay on the instances. */
-        fun of(n: Notification) = NotificationForm(
-            group = n.group,
-            title = n.title,
-            subject = n.subject,
-            body = n.body,
-            format = n.format,
-            kind = n.schedule.kind,
-            zone = n.schedule.zone.id,
-            runAt = n.schedule.runAt?.atZone(n.schedule.zone)?.format(LOCAL).orEmpty(),
-            cron = n.schedule.cron.orEmpty(),
+        fun of(n: Notification) = of(n.group, n.title, n.subject, n.body, n.format, n.schedule, n.deliveries)
+
+        /** The form's fields from their stored parts: a notification's, or an event's. */
+        fun of(
+            group: String,
+            title: String,
+            subject: String,
+            body: String,
+            format: BodyFormat,
+            schedule: Schedule,
+            deliveries: List<NotificationDelivery>,
+        ) = NotificationForm(
+            group = group,
+            title = title,
+            subject = subject,
+            body = body,
+            format = format,
+            kind = schedule.kind,
+            zone = schedule.zone.id,
+            runAt = schedule.runAt?.atZone(schedule.zone)?.format(LOCAL).orEmpty(),
+            cron = schedule.cron.orEmpty(),
             // A pattern's end is part of its words.
-            until = n.schedule.until?.takeIf { n.schedule.kind == ScheduleKind.RECURRING }?.atZone(n.schedule.zone)?.toLocalDate()?.toString().orEmpty(),
-            pattern = n.schedule.pattern.orEmpty(),
-            deliveries = n.deliveries.map { Delivery(it.id.toString(), it.instance.toString(), it.enabled, it.overrides) },
+            until = schedule.until?.takeIf { schedule.kind == ScheduleKind.RECURRING }?.atZone(schedule.zone)?.toLocalDate()?.toString().orEmpty(),
+            pattern = schedule.pattern.orEmpty(),
+            deliveries = deliveries.map { Delivery(it.id.toString(), it.instance.toString(), it.enabled, it.overrides) },
         )
 
         fun blank(group: String, zone: ZoneId) = NotificationForm(group = group, zone = zone.id)

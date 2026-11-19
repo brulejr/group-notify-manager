@@ -1,0 +1,23 @@
+info:
+  name: Delete Event
+  type: http
+  seq: 7
+
+http:
+  method: DELETE
+  url: "{{notify_url}}/api/events/{{event_id}}"
+  headers:
+    - name: Remote-User
+      value: "{{remote_user}}"
+    - name: Remote-Groups
+      value: "{{remote_groups}}"
+    - name: X-Requested-With
+      value: bruno
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

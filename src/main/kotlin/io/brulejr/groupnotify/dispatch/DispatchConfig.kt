@@ -11,6 +11,7 @@ package io.brulejr.groupnotify.dispatch
 import io.brulejr.groupnotify.audit.AuditService
 import io.brulejr.groupnotify.content.ContentService
 import io.brulejr.groupnotify.delivery.DeliveryService
+import io.brulejr.groupnotify.event.EventService
 import io.brulejr.groupnotify.group.GroupService
 import io.brulejr.groupnotify.instance.InstanceService
 import io.brulejr.groupnotify.notification.NotificationService
@@ -26,6 +27,7 @@ class DispatchConfig {
     @Bean
     fun dispatchService(
         notifications: NotificationService,
+        events: EventService,
         deliveries: DeliveryService,
         instances: InstanceService,
         content: ContentService,
@@ -33,7 +35,7 @@ class DispatchConfig {
         groups: GroupService,
         datafill: DispatchDatafill,
         clock: Clock,
-    ) = DispatchService(notifications, deliveries, instances, content, audit, groups, datafill, clock)
+    ) = DispatchService(notifications, events, deliveries, instances, content, audit, groups, datafill, clock)
 
     /** The schedule itself. Off, nothing is sent unless someone presses Send now. */
     @Bean

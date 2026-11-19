@@ -1,0 +1,37 @@
+info:
+  name: Create Event
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{notify_url}}/api/events"
+  headers:
+    - name: Remote-User
+      value: "{{remote_user}}"
+    - name: Remote-Groups
+      value: "{{remote_groups}}"
+  body:
+    type: json
+    data: |-
+      {
+        "group": "notify_club",
+        "title": "Club meeting",
+        "subject": "Club meeting {{event.when}} at {{event.location}}",
+        "body": "The **meeting** is {{event.date}} at {{event.time}}, at {{event.location}}.",
+        "schedule": {"kind": "PATTERN", "pattern": "every other month on the 3rd tuesday at 7pm", "zone": "America/New_York"},
+        "properties": [{"name": "location", "value": "Town hall"}],
+        "reminders": [
+          {"amount": 7, "unit": "DAYS", "timing": "BEFORE"},
+          {"amount": 1, "unit": "HOURS", "timing": "BEFORE", "subject": "Starting {{event.when}}"}
+        ],
+        "deliveries": [{"instance": "{{instance_id}}"}]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

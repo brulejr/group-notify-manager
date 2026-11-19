@@ -11,7 +11,9 @@ package io.brulejr.groupnotify.notification.api
 import io.brulejr.groupnotify.instance.InstanceService
 import io.brulejr.groupnotify.notification.BodyFormat
 import io.brulejr.groupnotify.notification.Notification
+import io.brulejr.groupnotify.notification.NotificationDelivery
 import io.brulejr.groupnotify.notification.NotificationStatus
+import io.brulejr.groupnotify.notification.Schedule
 import io.brulejr.groupnotify.notification.ScheduleKind
 import java.time.Instant
 import java.time.LocalDateTime
@@ -68,6 +70,17 @@ data class NotificationView(
     )
 
     companion object {
+        /** A schedule as the API shows it, a pattern in its canonical words and in English. */
+        fun schedule(s: Schedule) = ScheduleView(
+            s.kind, s.zone.id, s.runAt?.atZone(s.zone)?.toLocalDateTime(), s.cron, s.until, s.pattern, s.parsedPattern?.describe(),
+        )
+
+        /** Deliveries by their instances, with their overrides; never a secret. */
+        fun deliveries(list: List<NotificationDelivery>, instances: InstanceService) = list.map { d ->
+            val instance = instances.get(d.instance)
+            DeliveryView(d.id, d.instance, instance?.name, instance?.plugin, d.enabled, instance?.let(instances::summary) ?: "deleted instance", d.overrides)
+        }
+
         fun of(n: Notification, instances: InstanceService) = NotificationView(
             id = n.id,
             group = n.group,
@@ -75,21 +88,11 @@ data class NotificationView(
             subject = n.subject,
             body = n.body,
             format = n.format,
-            schedule = ScheduleView(
-                n.schedule.kind, n.schedule.zone.id,
-                n.schedule.runAt?.atZone(n.schedule.zone)?.toLocalDateTime(), n.schedule.cron, n.schedule.until,
-                n.schedule.pattern, n.schedule.parsedPattern?.describe(),
-            ),
+            schedule = schedule(n.schedule),
             status = n.status,
             nextRunAt = n.nextRunAt,
             lastRunAt = n.lastRunAt,
-            deliveries = n.deliveries.map { d ->
-                val instance = instances.get(d.instance)
-                DeliveryView(
-                    d.id, d.instance, instance?.name, instance?.plugin, d.enabled,
-                    instance?.let(instances::summary) ?: "deleted instance", d.overrides,
-                )
-            },
+            deliveries = deliveries(n.deliveries, instances),
             createdBy = n.createdBy,
             createdAt = n.createdAt,
             updatedBy = n.updatedBy,

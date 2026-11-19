@@ -82,7 +82,9 @@
               <span class="min-w-0 flex-grow-1">
                 <a th:if="${e.notificationId != null and e.type.name() != 'DELETED'}" th:href="@{/ui/notifications/{id}(id=${e.notificationId})}"
                    class="fw-medium text-decoration-none" th:text="${e.notificationTitle}">Title</a>
-                <span th:unless="${e.notificationId != null and e.type.name() != 'DELETED'}" class="fw-medium" th:text="${e.notificationTitle}">Title</span>
+                <a th:if="${e.eventId != null and e.type.name() != 'DELETED'}" th:href="@{/ui/events/{id}(id=${e.eventId})}"
+                   class="fw-medium text-decoration-none"><i class="bi bi-calendar-event me-1"></i><span th:text="${e.notificationTitle}">Title</span></a>
+                <span th:unless="${(e.notificationId != null or e.eventId != null) and e.type.name() != 'DELETED'}" class="fw-medium" th:text="${e.notificationTitle}">Title</span>
                 <span class="small text-body-secondary d-block text-truncate" th:text="${e.target ?: e.actor}">target</span>
               </span>
               <time class="small text-body-secondary text-nowrap" data-format="relative" th:datetime="${e.occurredAt}"></time>

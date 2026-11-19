@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{ui/layout :: page(title='Events', active='events', content=~{::main})}">
+<body>
+<main class="console-content">
+  <div class="page-header">
+    <div>
+      <h1>Events <span class="badge text-bg-secondary align-middle fs-6" th:text="${rows.size()}">0</span></h1>
+      <p class="lead-text">What your groups hold, once or on a schedule: a meeting, a net, a field day, each with reminders sent around every
+        occurrence. Alongside the notifications, which are sent on their own schedule.</p>
+    </div>
+    <div class="actions" th:if="${canCreate}">
+      <a th:href="@{/ui/events/new}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New event</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <form class="filter-bar w-100" th:action="@{/ui/events}" method="get">
+        <select class="form-select w-auto" name="group" aria-label="Group" onchange="this.form.requestSubmit()">
+          <option value="">All groups</option>
+          <option th:each="g : ${groups}" th:value="${g}" th:text="${groupNames.get(g) ?: g}" th:selected="${g == group}">group</option>
+        </select>
+      </form>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead><tr><th>Event</th><th>Group</th><th>Next occurrence</th><th>Next reminder</th><th>Deliveries</th><th>Status</th></tr></thead>
+        <tbody>
+        <tr th:each="row : ${rows}" th:with="e=${row.event}">
+          <td class="min-w-0">
+            <a class="fw-semibold text-decoration-none" th:href="@{/ui/events/{id}(id=${e.id})}" th:text="${e.title}">title</a>
+            <div class="small text-body-secondary text-truncate subject-line" th:text="${e.subject}">subject</div>
+          </td>
+          <td><span th:replace="~{ui/layout :: group(${e.group}, ${row.groupName})}"></span></td>
+          <td class="small text-nowrap">
+            <th:block th:if="${row.nextOccurrence != null}">
+              <span th:text="${#temporals.format(row.nextOccurrence.atZone(e.schedule.zone), 'EEE d MMM, h:mm a z')}">Tue</span>
+              <div><time class="text-body-secondary" data-format="relative" th:datetime="${row.nextOccurrence}"></time></div>
+            </th:block>
+            <span th:if="${row.nextOccurrence == null}" class="text-body-secondary">—</span>
+          </td>
+          <td class="small text-nowrap">
+            <th:block th:if="${e.nextRunAt != null}">
+              <span th:text="${row.nextReminder}">1 hour before</span>
+              <div><time class="text-body-secondary" data-format="relative" th:datetime="${e.nextRunAt}"></time></div>
+            </th:block>
+            <span th:if="${e.nextRunAt == null}" class="text-body-secondary">—</span>
+          </td>
+          <td>
+            <span class="delivery-chip" th:each="d : ${row.deliveries}" th:classappend="${!d.enabled} ? 'disabled' : (${!d.ready} ? 'not-ready' : '')"
+                  th:title="${d.name} + ' (' + ${d.pluginName} + '): ' + ${d.summary}"><i class="bi" th:classappend="'bi-' + ${d.icon}"></i></span>
+          </td>
+          <td><span th:replace="~{ui/layout :: status(${e.status})}"></span></td>
+        </tr>
+        <tr th:if="${rows.isEmpty()}"><td colspan="6" class="text-body-secondary">No events yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+</body>
+</html>

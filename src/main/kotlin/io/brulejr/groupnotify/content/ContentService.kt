@@ -54,32 +54,55 @@ class ContentService(private val datafill: ContentDatafill) {
     }
 
     /** What the plugins are handed for [notification] as sent at [at]. */
-    fun render(notification: Notification, groupName: String, at: Instant): NotificationMessage {
-        val values = placeholders(notification.title, groupName, notification.schedule.zone, at)
-        val subject = Placeholders.fill(notification.subject, values).replace(Regex("\\s+"), " ").trim()
-        val body = Placeholders.fill(notification.body, values, html = notification.format == BodyFormat.HTML)
-        val html = html(body, notification.format)
+    fun render(notification: Notification, groupName: String, at: Instant): NotificationMessage = render(
+        id = notification.id.toString(), title = notification.title, group = notification.group, groupName = groupName,
+        subject = notification.subject, body = notification.body, format = notification.format,
+        zone = notification.schedule.zone, at = at,
+    )
+
+    /**
+     * What the plugins are handed for a message with these words, sent at [at]: the
+     * standard placeholders filled, and [extra] ones too, such as an event's.
+     */
+    fun render(
+        id: String,
+        title: String,
+        group: String,
+        groupName: String,
+        subject: String,
+        body: String,
+        format: BodyFormat,
+        zone: ZoneId,
+        at: Instant,
+        extra: Map<String, String> = emptyMap(),
+    ): NotificationMessage {
+        val values = placeholders(title, groupName, zone, at) + extra
+        val filledSubject = Placeholders.fill(subject, values).replace(Regex("\\s+"), " ").trim()
+        val filledBody = Placeholders.fill(body, values, html = format == BodyFormat.HTML)
+        val html = html(filledBody, format)
         return NotificationMessage(
-            notificationId = notification.id.toString(),
-            title = notification.title,
-            group = notification.group,
-            subject = subject,
-            markdown = markdown(body, notification.format),
+            notificationId = id,
+            title = title,
+            group = group,
+            subject = filledSubject,
+            markdown = markdown(filledBody, format),
             html = html,
             text = HtmlFlattener.toText(html),
             scheduledFor = at,
         )
     }
 
-    fun placeholders(title: String, groupName: String, zone: ZoneId, at: Instant): Map<String, String> {
+    /** [at] in [zone] as the `date`, `time`, `weekday` and `datetime` placeholders give it, keyed with [prefix]. */
+    fun timeValues(prefix: String, zone: ZoneId, at: Instant): Map<String, String> {
         val local = at.atZone(zone)
         return mapOf(
-            "title" to title,
-            "group" to groupName,
-            "date" to dateFormat.format(local),
-            "time" to timeFormat.format(local),
-            "weekday" to weekdayFormat.format(local),
-            "datetime" to "${dateFormat.format(local)} ${timeFormat.format(local)}",
+            "${prefix}date" to dateFormat.format(local),
+            "${prefix}time" to timeFormat.format(local),
+            "${prefix}weekday" to weekdayFormat.format(local),
+            "${prefix}datetime" to "${dateFormat.format(local)} ${timeFormat.format(local)}",
         )
     }
+
+    fun placeholders(title: String, groupName: String, zone: ZoneId, at: Instant): Map<String, String> =
+        mapOf("title" to title, "group" to groupName) + timeValues("", zone, at)
 }

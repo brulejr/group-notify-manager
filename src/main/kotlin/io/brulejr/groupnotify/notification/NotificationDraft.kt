@@ -35,6 +35,9 @@ data class NotificationDraft(
     val deliveries: List<Delivery> = emptyList(),
     val paused: Boolean = false,
 ) {
+    /** The schedule fields, for [ScheduleRules]. */
+    val schedule get() = ScheduleInput(kind, zone, runAt, cron, until, pattern)
+
     /**
      * @property id the stored delivery this replaces, so it keeps its id; null for a new one.
      * @property instance the id of one of the group's plugin instances.

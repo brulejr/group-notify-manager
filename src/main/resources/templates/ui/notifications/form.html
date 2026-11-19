@@ -49,7 +49,7 @@
                        th:classappend="${errors.containsKey('subject')} ? 'is-invalid'" maxlength="300">
                 <div class="invalid-feedback" th:text="${errors.get('subject')}"></div>
               </div>
-              <div class="col-12">
+              <div class="col-12" th:fragment="bodyEditor">
                 <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                   <label class="form-label fw-semibold mb-0 me-auto" for="body">Body</label>
                   <div class="btn-group btn-group-sm" role="group" aria-label="Editor">
@@ -75,7 +75,7 @@
         </div>
 
         <!--/* ---- schedule ---- */-->
-        <div class="card mb-4 schedule-card">
+        <div class="card mb-4 schedule-card" th:fragment="scheduleCard">
           <div class="card-header"><i class="bi bi-calendar-event"></i>Schedule</div>
           <div class="card-body" id="schedule-inputs">
             <div class="btn-group mb-3" role="group" aria-label="Schedule kind">
@@ -134,7 +134,7 @@
         </div>
 
         <!--/* ---- deliveries ---- */-->
-        <div class="card mb-4">
+        <div class="card mb-4" th:fragment="deliveriesCard">
           <div class="card-header"><i class="bi bi-send"></i>Deliveries
             <!--/* The group's instances; fetched again when the group changes. */-->
             <div id="instance-menu" class="ms-auto" th:hx-get="@{/ui/notifications/instances}" hx-trigger="change from:#group"

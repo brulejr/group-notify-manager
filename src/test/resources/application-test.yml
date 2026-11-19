@@ -5,6 +5,8 @@ notify:
     store: memory
   audit:
     store: memory
+  events:
+    store: memory
   # No secret-key: sealed with a key for the run, which is all a test needs.
   instances:
     store: memory

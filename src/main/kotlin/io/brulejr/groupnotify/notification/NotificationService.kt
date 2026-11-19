@@ -16,7 +16,6 @@ import io.brulejr.groupnotify.instance.InstanceService
 import io.brulejr.groupnotify.security.NotifyUser
 import java.time.Clock
 import java.time.Instant
-import java.time.LocalTime
 import java.time.ZoneId
 import java.util.UUID
 
@@ -33,11 +32,13 @@ import java.util.UUID
 class NotificationService(
     private val store: NotificationPort,
     private val groups: GroupService,
-    private val instances: InstanceService,
+    instances: InstanceService,
     private val audit: AuditService,
     private val datafill: NotificationDatafill,
     private val clock: Clock,
 ) {
+
+    private val deliveryRules = DeliveryRules(instances)
 
     val defaultZone: ZoneId get() = datafill.zone
 
@@ -144,10 +145,11 @@ class NotificationService(
         if (subject.isEmpty()) problem("subject", "is required") else if (subject.length > 300) problem("subject", "must be at most 300 characters")
         if (draft.body.isBlank()) problem("body", "is required") else if (draft.body.length > datafill.maxBodyLength) problem("body", "must be at most ${datafill.maxBodyLength} characters")
 
-        val zone = draft.zone.trim().ifEmpty { datafill.defaultZone }.let { runCatching { ZoneId.of(it) }.getOrNull() }
-        if (zone == null) problem("zone", "is not a time zone")
-        val schedule = zone?.let { schedule(draft, it, existing, now, ::problem) }
-        val built = deliveries(draft.deliveries, group, existing, ::problem)
+        // A one-off already sent can still be edited, its wording say, without choosing a
+        // new time; choosing one sends it again.
+        val sentRunAt = existing?.takeIf { it.status == NotificationStatus.COMPLETED }?.schedule?.runAt
+        val schedule = ScheduleRules.build(draft.schedule, datafill.defaultZone, now, sentRunAt, ::problem)
+        val built = deliveryRules.build(draft.deliveries, group, existing?.deliveries.orEmpty(), datafill.maxDeliveries, ::problem)
 
         if (problems.isNotEmpty() || schedule == null) return NotificationResult.Invalid(problems.toList())
 
@@ -177,104 +179,6 @@ class NotificationService(
                 updatedAt = now,
             ),
         )
-    }
-
-    private fun schedule(
-        draft: NotificationDraft,
-        zone: ZoneId,
-        existing: Notification?,
-        now: Instant,
-        problem: (String, String) -> Boolean,
-    ): Schedule? = when (draft.kind) {
-        ScheduleKind.ONCE -> {
-            val runAt = draft.runAt?.atZone(zone)?.toInstant()
-            when {
-                runAt == null -> null.also { problem("runAt", "is required") }
-                // A one-off already sent can still be edited, its wording say, without
-                // choosing a new time; choosing one sends it again.
-                runAt <= now && !(existing?.status == NotificationStatus.COMPLETED && existing.schedule.runAt == runAt) ->
-                    null.also { problem("runAt", "must be in the future") }
-                else -> Schedule(ScheduleKind.ONCE, zone, runAt = runAt)
-            }
-        }
-        ScheduleKind.RECURRING -> {
-            val cron = draft.cron.trim()
-            val cronProblem = if (cron.isEmpty()) "is required" else CronSpec.problem(cron)
-            if (cronProblem != null) {
-                null.also { problem("cron", cronProblem) }
-            } else {
-                val until = draft.until?.atTime(LocalTime.MAX)?.atZone(zone)?.toInstant()
-                val schedule = Schedule(ScheduleKind.RECURRING, zone, cron = cron, until = until)
-                if (until != null && until <= now) {
-                    null.also { problem("until", "must not have passed") }
-                } else if (schedule.nextAfter(now) == null) {
-                    null.also { problem("cron", "never runs before the end date") }
-                } else {
-                    schedule
-                }
-            }
-        }
-        // Stored as its canonical words, start included, so "every other" keeps counting
-        // from the same day however often it is edited.
-        ScheduleKind.PATTERN -> {
-            val text = draft.pattern.trim()
-            val pattern = if (text.isEmpty()) {
-                null.also { problem("pattern", "Write a pattern, e.g. “every week on tuesday at 6pm”.") }
-            } else {
-                runCatching { PatternParser.parse(text, now.atZone(zone).toLocalDate()) }
-                    .onFailure { problem("pattern", it.message ?: "is not understood") }
-                    .getOrNull()
-            }
-            pattern?.let {
-                val schedule = Schedule(
-                    ScheduleKind.PATTERN, zone, pattern = it.canonical(),
-                    until = it.until?.atTime(LocalTime.MAX)?.atZone(zone)?.toInstant(),
-                )
-                when {
-                    it.until != null && schedule.until!! <= now -> null.also { problem("pattern", "Its end date has passed.") }
-                    schedule.nextAfter(now) == null -> null.also { problem("pattern", "It never runs before its end date.") }
-                    else -> schedule
-                }
-            }
-        }
-    }
-
-    /**
-     * Each delivery must name one of [group]'s instances, once; its overrides are kept
-     * only for the plugin's overridable fields and where they differ from the instance.
-     */
-    private fun deliveries(
-        drafts: List<NotificationDraft.Delivery>,
-        group: String,
-        existing: Notification?,
-        problem: (String, String) -> Boolean,
-    ): List<NotificationDelivery> {
-        if (drafts.isEmpty()) problem("deliveries", "add at least one delivery")
-        if (drafts.size > datafill.maxDeliveries) problem("deliveries", "at most ${datafill.maxDeliveries} deliveries")
-        val previous = existing?.deliveries.orEmpty().associateBy { it.id.toString() }
-        val chosen = mutableSetOf<UUID>()
-        return drafts.mapIndexedNotNull { index, draft ->
-            val prefix = "deliveries[$index]"
-            val instance = runCatching { UUID.fromString(draft.instance.trim()) }.getOrNull()?.let(instances::get)
-            when {
-                instance == null -> {
-                    problem("$prefix.instance", "is not a delivery instance")
-                    return@mapIndexedNotNull null
-                }
-                // An instance of another group would send where this group may not.
-                instance.group != group -> {
-                    problem("$prefix.instance", "${instance.name} belongs to another group")
-                    return@mapIndexedNotNull null
-                }
-                !chosen.add(instance.id) -> problem("$prefix.instance", "${instance.name} is chosen more than once")
-            }
-            val overrides = instances.overrides(checkNotNull(instance), draft.overrides)
-            instances.checkOverrides(instance, overrides).forEach {
-                problem(if (it.field in setOf("plugin", "instance")) "$prefix.instance" else "$prefix.overrides.${it.field}", it.reason)
-            }
-            val id = draft.id?.let { previous[it] }?.id ?: UUID.randomUUID()
-            NotificationDelivery(id, instance.id, overrides, draft.enabled)
-        }
     }
 
     // ---- shared ----

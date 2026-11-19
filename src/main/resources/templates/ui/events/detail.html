@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{ui/layout :: page(title=${e.title}, active='events', content=~{::main})}">
+<body>
+<main class="console-content">
+  <div th:replace="~{ui/layout :: toast(${toast})}"></div>
+  <div th:fragment="body" id="detail-body" th:hx-get="@{/ui/events/{id}/body(id=${e.id})}" hx-trigger="eventsChanged from:body"
+       hx-target="this" hx-swap="outerHTML" hx-disinherit="*">
+    <div class="page-header">
+      <div class="min-w-0">
+        <div class="small mb-1"><a th:href="@{/ui/events}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Events</a></div>
+        <h1 class="d-flex flex-wrap align-items-center gap-2">
+          <i class="bi bi-calendar-event text-body-secondary"></i><span th:text="${e.title}">Title</span>
+          <span th:replace="~{ui/layout :: status(${e.status})}"></span>
+        </h1>
+        <p class="lead-text d-flex flex-wrap gap-2 align-items-center">
+          <span th:replace="~{ui/layout :: group(${e.group}, ${groupName})}"></span>
+          <span class="small">Created by <span th:text="${e.createdBy}">x</span> <time data-format="relative" th:datetime="${e.createdAt}"></time>,
+            last edited by <span th:text="${e.updatedBy}">x</span> <time data-format="relative" th:datetime="${e.updatedAt}"></time></span>
+        </p>
+      </div>
+      <div class="actions" th:if="${canEdit}">
+        <button type="button" class="btn btn-outline-secondary" hx-swap="none" data-confirm-label="Send now"
+                th:hx-post="@{/ui/events/{id}/send(id=${e.id})}"
+                th:hx-confirm="'Send ' + ${e.title} + ' now, for its next occurrence, through every enabled delivery? Its reminders are not changed.'">
+          <i class="bi bi-send me-1"></i>Send now</button>
+        <button type="button" class="btn btn-outline-warning" hx-swap="none" th:if="${e.status.name() == 'ACTIVE'}"
+                th:hx-post="@{/ui/events/{id}/pause(id=${e.id})}"><i class="bi bi-pause-fill me-1"></i>Pause</button>
+        <button type="button" class="btn btn-outline-success" hx-swap="none" th:if="${e.status.name() == 'PAUSED'}"
+                th:hx-post="@{/ui/events/{id}/resume(id=${e.id})}"><i class="bi bi-play-fill me-1"></i>Resume</button>
+        <a class="btn btn-primary" th:href="@{/ui/events/{id}/edit(id=${e.id})}"><i class="bi bi-pencil me-1"></i>Edit</a>
+        <button type="button" class="btn btn-outline-danger" hx-swap="none" data-confirm-label="Delete"
+                th:hx-delete="@{/ui/events/{id}(id=${e.id})}" th:hx-confirm="'Delete ' + ${e.title} + '? Its history is kept.'"
+                title="Delete"><i class="bi bi-trash"></i></button>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-xl-8">
+        <!--/* ---- coming occurrences, each with its note ---- */-->
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-calendar3"></i>Coming occurrences</div>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item" th:each="o : ${occurrences}">
+              <div class="d-flex flex-wrap align-items-baseline gap-2">
+                <span class="fw-semibold" th:text="${#temporals.format(o.occurrence.atZone(e.schedule.zone), 'EEEE d MMMM yyyy, h:mm a z')}">time</span>
+                <time class="small text-body-secondary" data-format="relative" th:datetime="${o.occurrence}"></time>
+              </div>
+              <div class="small text-body-secondary" th:unless="${o.reminders.isEmpty()}">
+                <i class="bi bi-alarm me-1"></i><span th:text="${#strings.listJoin(o.reminders, ' · ')}">reminders</span></div>
+              <!--/* The note as it reads; it is edited on a page of its own, with the body's editor. */-->
+              <div class="occurrence-note rendered small mt-2" th:if="${o.hasNote}" th:utext="${o.noteHtml}">note</div>
+              <a class="btn btn-sm btn-link px-0" th:if="${canEdit}" th:href="@{/ui/events/{id}/notes/{key}(id=${e.id}, key=${o.key})}">
+                <i class="bi me-1" th:classappend="${o.hasNote} ? 'bi-pencil' : 'bi-plus-lg'"></i><span th:text="${o.hasNote} ? 'Edit note' : 'Add note'">Add note</span></a>
+            </li>
+            <li class="list-group-item text-body-secondary" th:if="${occurrences.isEmpty()}">No occurrences to come.</li>
+          </ul>
+        </div>
+
+        <div class="card mb-4" th:if="${message != null}">
+          <div class="card-header"><i class="bi bi-envelope-paper"></i><span th:text="${message.subject}">Subject</span>
+            <span class="ms-auto small fw-normal text-body-secondary">for the next occurrence, as sent by hand</span></div>
+          <div class="card-body rendered" th:utext="${message.html}">body</div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><i class="bi bi-clock-history"></i>History</div>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item small d-flex gap-2" th:each="h : ${history}">
+              <span th:replace="~{ui/layout :: event(${h.type})}"></span>
+              <span class="flex-grow-1 min-w-0"><span th:text="${h.detail}">detail</span>
+                <span class="text-body-secondary d-block text-truncate" th:if="${h.target != null}" th:text="${h.target}">target</span></span>
+              <time class="text-body-secondary text-nowrap" data-format="relative" th:datetime="${h.occurredAt}"></time>
+            </li>
+            <li class="list-group-item small text-body-secondary" th:if="${history.isEmpty()}">Nothing yet.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="col-xl-4">
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-calendar-event"></i>When</div>
+          <div class="card-body">
+            <dl class="props">
+              <dt>Kind</dt><dd th:text="${e.schedule.kind.label}">Pattern</dd>
+              <th:block th:if="${e.schedule.kind.name() == 'ONCE'}">
+                <dt>At</dt><dd th:text="${#temporals.format(e.schedule.runAt.atZone(e.schedule.zone), 'EEEE d MMMM yyyy, h:mm a z')}">time</dd>
+              </th:block>
+              <th:block th:if="${e.schedule.kind.name() == 'PATTERN'}">
+                <dt>Pattern</dt><dd th:text="${patternMeaning}">Every Tuesday…</dd>
+              </th:block>
+              <th:block th:if="${e.schedule.kind.name() == 'RECURRING'}">
+                <dt>Cron</dt><dd class="mono" th:text="${e.schedule.cron}">cron</dd>
+              </th:block>
+              <dt>Time zone</dt><dd th:text="${e.schedule.zone.id}">zone</dd>
+              <dt>Next reminder</dt><dd th:text="${nextReminder ?: 'none'}">1 hour before — Tue</dd>
+            </dl>
+          </div>
+        </div>
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-card-list"></i>Properties</div>
+          <div class="card-body">
+            <dl class="props mb-0">
+              <th:block th:each="p : ${e.properties}">
+                <dt><code th:text="'{{event.' + ${p.name} + '}}'">{{event.location}}</code></dt><dd th:text="${p.value}">value</dd>
+              </th:block>
+            </dl>
+            <span class="small text-body-secondary" th:if="${e.properties.isEmpty()}">None.</span>
+          </div>
+        </div>
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-alarm"></i>Reminders</div>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item small" th:each="r : ${e.reminders}" th:classappend="${!r.enabled} ? 'opacity-50'">
+              <span class="fw-medium" th:text="${r.describe()}">1 day before</span>
+              <span class="badge text-bg-secondary ms-1" th:unless="${r.enabled}">off</span>
+              <span class="text-body-secondary d-block" th:if="${!#strings.isEmpty(r.subject)}" th:text="'“' + ${r.subject} + '”'">own subject</span>
+              <span class="text-body-secondary d-block" th:if="${#strings.isEmpty(r.subject) and #strings.isEmpty(r.body)}">the event's words</span>
+            </li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-header"><i class="bi bi-send"></i>Deliveries</div>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item delivery-item" th:each="d : ${deliveries}" th:classappend="${!d.enabled} ? 'opacity-50'">
+              <i class="bi plugin-icon" th:classappend="'bi-' + ${d.icon}"></i>
+              <div class="min-w-0 flex-grow-1">
+                <div class="fw-medium"><span th:text="${d.name}">Club announcements</span>
+                  <span class="badge text-bg-secondary ms-1" th:unless="${d.enabled}">disabled</span>
+                  <span class="badge text-bg-warning ms-1" th:unless="${d.ready}" th:title="${d.reason}">not ready</span></div>
+                <div class="small text-body-secondary text-truncate" th:text="${d.pluginName} + ' · ' + ${d.summary}">summary</div>
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-secondary" th:if="${canEdit}" hx-swap="none" data-confirm-label="Send test"
+                      th:hx-post="@{/ui/events/{id}/send(id=${e.id}, deliveryId=${d.id})}"
+                      th:hx-confirm="'Send ' + ${e.title} + ' now through ' + ${d.name} + ' only?'">Test</button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

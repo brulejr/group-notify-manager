@@ -34,7 +34,7 @@ class InstanceService(
     private val store: InstancePort,
     private val deliveries: DeliveryService,
     private val groups: GroupService,
-    private val usage: InstanceUsage,
+    private val usages: List<InstanceUsage>,
     private val audit: AuditService,
     private val cipher: SecretCipher,
     private val datafill: InstanceDatafill,
@@ -70,8 +70,10 @@ class InstanceService(
     fun manageableGroups(user: NotifyUser, inUse: Collection<String> = emptyList()): List<String> =
         groups.editable(user, inUse + groupsInUse())
 
-    /** The titles of the notifications that send through [instance]. */
-    fun usedBy(instance: PluginInstance): List<String> = usage.notificationsUsing(instance.id)
+    /** The titles of the notifications and events that send through [instance]. */
+    fun usedBy(instance: PluginInstance): List<String> = usedBy(instance.id)
+
+    private fun usedBy(id: UUID): List<String> = usages.flatMap { it.notificationsUsing(id) }
 
     /** Every group that has an instance. */
     fun groupsInUse(): Set<String> = store.list(null).map { it.group }.toSortedSet()
@@ -102,7 +104,7 @@ class InstanceService(
     fun delete(id: UUID, user: NotifyUser): InstanceResult {
         val existing = find(id, user) ?: return InstanceResult.NotFound
         if (!canManage(user, existing.group)) return InstanceResult.Forbidden
-        val using = usage.notificationsUsing(id)
+        val using = usedBy(id)
         if (using.isNotEmpty()) return InstanceResult.InUse(using)
         store.delete(id)
         record(existing, AuditEventType.DELETED, user, "delivery instance deleted")

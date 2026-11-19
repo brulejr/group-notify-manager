@@ -10,6 +10,7 @@ package io.brulejr.groupnotify.notification.api
 
 import io.brulejr.groupnotify.notification.BodyFormat
 import io.brulejr.groupnotify.notification.NotificationDraft
+import io.brulejr.groupnotify.notification.ScheduleInput
 import io.brulejr.groupnotify.notification.ScheduleKind
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -42,7 +43,9 @@ data class NotificationRequest(
         val cron: String = "",
         val until: LocalDate? = null,
         val pattern: String = "",
-    )
+    ) {
+        fun toInput() = ScheduleInput(kind, zone, at, cron, until, pattern)
+    }
 
     data class DeliveryRequest(
         val id: String? = null,

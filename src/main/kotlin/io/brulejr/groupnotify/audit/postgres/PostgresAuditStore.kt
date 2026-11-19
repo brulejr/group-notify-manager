@@ -27,9 +27,9 @@ class PostgresAuditStore(private val jdbc: JdbcClient) : AuditPort {
         val id = jdbc.sql(
             """
             INSERT INTO audit_events (occurred_at, type, actor, notification_id, notification_title, group_name,
-                                      delivery_id, plugin, target, trigger, detail, reference, attempts)
+                                      delivery_id, plugin, target, trigger, detail, reference, attempts, event_id)
             VALUES (:occurredAt, :type, :actor, :notificationId, :title, :group,
-                    :deliveryId, :plugin, :target, :trigger, :detail, :reference, :attempts)
+                    :deliveryId, :plugin, :target, :trigger, :detail, :reference, :attempts, :eventId)
             RETURNING id
             """,
         )
@@ -46,6 +46,7 @@ class PostgresAuditStore(private val jdbc: JdbcClient) : AuditPort {
             .param("detail", event.detail)
             .param("reference", event.reference)
             .param("attempts", event.attempts)
+            .param("eventId", event.eventId)
             .query(Long::class.java)
             .single()
         return event.copy(id = id)
@@ -78,6 +79,7 @@ class PostgresAuditStore(private val jdbc: JdbcClient) : AuditPort {
             if (it.isEmpty()) clauses += "false" else { clauses += "group_name IN (:groups)"; params["groups"] = it.toList() }
         }
         query.notificationId?.let { clauses += "notification_id = :notificationId"; params["notificationId"] = it }
+        query.eventId?.let { clauses += "event_id = :eventId"; params["eventId"] = it }
         query.types?.let {
             if (it.isEmpty()) clauses += "false" else { clauses += "type IN (:types)"; params["types"] = it.map { t -> t.name } }
         }
@@ -101,5 +103,6 @@ class PostgresAuditStore(private val jdbc: JdbcClient) : AuditPort {
         detail = getString("detail"),
         reference = getString("reference"),
         attempts = getObject("attempts") as Int?,
+        eventId = getObject("event_id", UUID::class.java),
     )
 }

@@ -301,3 +301,8 @@ time.just-now { color: #16a34a; font-weight: 600; }
 [data-bs-theme="dark"] .ql-snow .ql-picker-options { background: var(--bs-tertiary-bg); }
 [data-bs-theme="dark"] .ql-editor.ql-blank::before { color: var(--bs-secondary-color); }
 .EasyMDEContainer .editor-toolbar button .bi { font-size: 1rem; }
+
+/* An occurrence's note on its event's page: as it reads, kept short. */
+.occurrence-note { border-left: 3px solid var(--bs-primary-border-subtle); padding: .25rem .75rem; background: var(--bs-tertiary-bg);
+  border-radius: .25rem; max-height: 9rem; overflow: hidden; }
+.occurrence-note > :last-child { margin-bottom: 0; }

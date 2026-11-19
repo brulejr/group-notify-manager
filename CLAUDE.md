@@ -19,7 +19,8 @@ A Gradle multi-project build:
   never referenced from the application's code (they are `runtimeOnly`).
 - the root project: the application, package `io.brulejr.groupnotify`.
 
-One package per feature: `notification/`, `dispatch/` (the scheduler and Send now),
+One package per feature: `notification/`, `event/` (events and their reminders),
+`dispatch/` (the scheduler and Send now, for both),
 `delivery/` (the plugin host: loading, settings, retries, secret masking), `instance/`
 (plugins provisioned per group as named instances, their encrypted secrets), `content/`
 (Markdown, sanitised HTML, text, placeholders), `audit/`, `group/`, `console/`.
@@ -67,8 +68,11 @@ docker compose up -d     # dev services via COMPOSE_FILE in .env: PostgreSQL :54
   (AES-256-GCM, `NOTIFY_SECRET_KEY`) before they are stored, never leave the server
   (the API returns `********`, the form leaves the input empty, blank or the mask on
   save keeps the stored value), and are opened only in `InstanceService.target`, to send.
-- `instance` must not depend on `notification`: it learns what uses an instance through
-  `InstanceUsage`, which `NotificationConfig` provides.
+- `instance` must not depend on `notification` or `event`: it learns what uses an
+  instance through the `InstanceUsage` beans `NotificationConfig` and `EventConfig` provide.
+- Events reuse the notification's schedule and delivery checks (`ScheduleRules`,
+  `DeliveryRules`) and its form parts (`ui/notifications/form :: bodyEditor`,
+  `scheduleCard`, `deliveriesCard`); change them there, for both.
 - Templates: give a template Java collections (`toMutableList()`), never Kotlin's empty
   singletons. Never put `th:if`/`th:each` on the element carrying `th:replace`. A
   container that sets `hx-target` also sets `hx-disinherit="*"`. Fragments fetched on

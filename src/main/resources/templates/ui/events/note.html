@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{ui/layout :: page(title='Note: ' + ${e.title}, active='events', content=~{::main})}">
+<body>
+<main class="console-content">
+  <div class="page-header">
+    <div class="min-w-0">
+      <div class="small mb-1"><a th:href="@{/ui/events/{id}(id=${e.id})}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Back to
+        <span th:text="${e.title}">the event</span></a></div>
+      <h1 th:text="${#temporals.format(occurrence.atZone(e.schedule.zone), 'EEEE d MMMM yyyy, h:mm a z')}">Tuesday 17 November</h1>
+      <p class="lead-text">A note for this occurrence of <strong th:text="${e.title}">the event</strong> only, e.g. "This week: guest speaker".
+        <th:block th:if="${usesPlaceholder}">Its body places the note where it writes <code>{{occurrence.note}}</code>.</th:block>
+        <th:block th:unless="${usesPlaceholder}">It is added after the body of every reminder for this occurrence.</th:block>
+        It may use the event's placeholders too.</p>
+    </div>
+  </div>
+
+  <!--/* The note's editor is the body's: Markdown or rich text, with its preview. */-->
+  <form th:fragment="form" id="note-form" class="note-form" novalidate hx-target="this" hx-swap="outerHTML" hx-disinherit="*"
+        th:hx-post="@{/ui/events/{id}/notes/{key}(id=${e.id}, key=${key})}">
+    <div th:replace="~{ui/layout :: toast(${toast})}"></div>
+    <div class="row g-4">
+      <div class="col-xl-8">
+        <div class="card">
+          <div class="card-body">
+            <div class="row g-3">
+              <div th:replace="~{ui/notifications/form :: bodyEditor}"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl-4">
+        <div class="card mb-4">
+          <div class="card-body d-grid gap-2">
+            <button type="submit" class="btn btn-primary">
+              <span class="htmx-indicator spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+              <i class="bi bi-check-lg me-1"></i>Save note</button>
+            <!--/* An empty note is no note. */-->
+            <button type="button" class="btn btn-outline-danger" th:if="${hasNote}" data-confirm-label="Remove"
+                    th:hx-post="@{/ui/events/{id}/notes/{key}(id=${e.id}, key=${key})}" hx-vals='{"body": "", "format": "MARKDOWN"}'
+                    hx-target="#note-form" hx-swap="outerHTML"
+                    hx-confirm="Remove this occurrence's note?"><i class="bi bi-trash me-1"></i>Remove note</button>
+            <a class="btn btn-outline-secondary" th:href="@{/ui/events/{id}(id=${e.id})}">Cancel</a>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><i class="bi bi-alarm"></i>Sent with</div>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item small" th:each="r : ${reminders}" th:text="${r}">1 day before</li>
+            <li class="list-group-item small text-body-secondary" th:if="${reminders.isEmpty()}">No reminder is on.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </form>
+</main>
+</body>
+</html>

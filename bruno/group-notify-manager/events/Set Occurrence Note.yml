@@ -1,0 +1,25 @@
+info:
+  name: Set Occurrence Note
+  type: http
+  seq: 5
+
+http:
+  method: PUT
+  url: "{{notify_url}}/api/events/{{event_id}}/notes"
+  headers:
+    - name: Remote-User
+      value: "{{remote_user}}"
+    - name: Remote-Groups
+      value: "{{remote_groups}}"
+  body:
+    type: json
+    data: |-
+      {"occurrence": "2027-01-20T00:00:00Z", "note": "This time: antenna workshop", "format": "MARKDOWN"}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

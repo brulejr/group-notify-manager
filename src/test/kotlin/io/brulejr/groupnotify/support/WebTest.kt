@@ -46,6 +46,9 @@ abstract class WebTest {
     @Autowired
     lateinit var instances: InstanceService
 
+    @Autowired
+    lateinit var eventStore: io.brulejr.groupnotify.event.EventPort
+
     lateinit var mvc: MockMvc
 
     @BeforeEach
@@ -53,6 +56,7 @@ abstract class WebTest {
         mvc = MockMvcBuilders.webAppContextSetup(context).apply<DefaultMockMvcBuilder>(springSecurity()).build()
         // The context, and its in-memory stores, outlive each test.
         store.list(null).forEach { store.delete(it.id) }
+        eventStore.list(null).forEach { eventStore.delete(it.id) }
         instanceStore.list(null).forEach { instanceStore.delete(it.id) }
     }
 

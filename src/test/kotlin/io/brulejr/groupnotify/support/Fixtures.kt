@@ -18,6 +18,13 @@ import io.brulejr.groupnotify.delivery.DeliveryService
 import io.brulejr.groupnotify.delivery.PluginHandle
 import io.brulejr.groupnotify.dispatch.DispatchDatafill
 import io.brulejr.groupnotify.dispatch.DispatchService
+import io.brulejr.groupnotify.event.EventDatafill
+import io.brulejr.groupnotify.event.EventDraft
+import io.brulejr.groupnotify.event.EventProperty
+import io.brulejr.groupnotify.event.EventService
+import io.brulejr.groupnotify.event.InMemoryEventStore
+import io.brulejr.groupnotify.event.ReminderTiming
+import io.brulejr.groupnotify.event.ReminderUnit
 import io.brulejr.groupnotify.group.GroupDatafill
 import io.brulejr.groupnotify.group.GroupService
 import io.brulejr.groupnotify.instance.InMemoryInstanceStore
@@ -33,6 +40,7 @@ import io.brulejr.groupnotify.notification.InMemoryNotificationStore
 import io.brulejr.groupnotify.notification.NotificationDatafill
 import io.brulejr.groupnotify.notification.NotificationDraft
 import io.brulejr.groupnotify.notification.NotificationService
+import io.brulejr.groupnotify.notification.ScheduleInput
 import io.brulejr.groupnotify.notification.ScheduleKind
 import io.brulejr.groupnotify.plugin.DeliveryPlugin
 import io.brulejr.groupnotify.platform.StoreType
@@ -51,18 +59,47 @@ class Fixtures(
     val audit = AuditService(auditStore, groups, AuditDatafill(store = StoreType.MEMORY), clock)
     val deliveries = DeliveryService(plugins.map { PluginHandle(it, "test") }, deliveryDatafill) { }
     val notificationStore = InMemoryNotificationStore()
+    val eventStore = InMemoryEventStore()
     val instanceStore = InMemoryInstanceStore()
     val cipher = SecretCipher(TEST_SECRET_KEY)
     val instances = InstanceService(
         instanceStore, deliveries, groups,
-        InstanceUsage { id -> notificationStore.list(null).filter { n -> n.deliveries.any { it.instance == id } }.map { it.title } },
+        listOf(
+            InstanceUsage { id -> notificationStore.list(null).filter { n -> n.deliveries.any { it.instance == id } }.map { it.title } },
+            InstanceUsage { id -> eventStore.list(null).filter { e -> e.deliveries.any { it.instance == id } }.map { "event: ${it.title}" } },
+        ),
         audit, cipher, InstanceDatafill(store = StoreType.MEMORY), clock,
     )
     val notifications = NotificationService(
         notificationStore, groups, instances, audit, NotificationDatafill(store = StoreType.MEMORY, defaultZone = "America/New_York"), clock,
     )
     val content = ContentService(ContentDatafill())
-    val dispatch = DispatchService(notifications, deliveries, instances, content, audit, groups, dispatchDatafill, clock)
+    val events = EventService(eventStore, groups, instances, content, audit, EventDatafill(store = StoreType.MEMORY), "America/New_York", clock)
+    val dispatch = DispatchService(notifications, events, deliveries, instances, content, audit, groups, dispatchDatafill, clock)
+
+    /**
+     * A club meeting every Tuesday at 7 PM from 10 November 2026, a Tuesday, with a
+     * location, reminded a day before and an hour before, through the club's channel.
+     */
+    fun eventDraft(
+        group: String = "notify_club",
+        schedule: ScheduleInput = ScheduleInput(ScheduleKind.PATTERN, "America/New_York", pattern = "every tuesday at 7pm starting 2026-11-10"),
+        reminders: List<EventDraft.Reminder> = listOf(
+            EventDraft.Reminder(amount = "1", unit = ReminderUnit.DAYS, timing = ReminderTiming.BEFORE),
+            EventDraft.Reminder(amount = "1", unit = ReminderUnit.HOURS, timing = ReminderTiming.BEFORE, subject = "Starting {{event.when}}"),
+        ),
+        deliveries: List<NotificationDraft.Delivery> = listOf(delivery()),
+    ) = EventDraft(
+        group = group,
+        title = "Club meeting",
+        subject = "Meeting {{event.weekday}} at {{event.location}}",
+        body = "See you {{event.when}} at **{{event.location}}**.",
+        format = BodyFormat.MARKDOWN,
+        schedule = schedule,
+        properties = listOf(EventProperty("location", "Town hall"), EventProperty("net_control", "W1AW")),
+        reminders = reminders,
+        deliveries = deliveries,
+    )
 
     /** An instance provisioned by an admin, of the recording plugin by default, to #general in the club. */
     fun instance(

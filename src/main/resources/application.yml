@@ -85,6 +85,11 @@ notify:
     store: ${NOTIFICATION_STORE:postgres}
     default-zone: ${DEFAULT_ZONE:America/New_York}
 
+  # Events: dated or recurring happenings of a group, with reminders relative to each
+  # occurrence. Their time zone defaults to notifications.default-zone.
+  events:
+    store: ${EVENT_STORE:postgres}
+
   audit:
     store: ${AUDIT_STORE:postgres}
     retention: 365d

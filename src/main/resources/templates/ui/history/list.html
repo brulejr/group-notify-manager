@@ -45,7 +45,9 @@
           <td>
             <a th:if="${e.notificationId != null and e.type.name() != 'DELETED'}" class="text-decoration-none fw-medium"
                th:href="@{/ui/notifications/{id}(id=${e.notificationId})}" th:text="${e.notificationTitle}">title</a>
-            <span th:unless="${e.notificationId != null and e.type.name() != 'DELETED'}" th:text="${e.notificationTitle}">title</span>
+            <a th:if="${e.eventId != null and e.type.name() != 'DELETED'}" class="text-decoration-none fw-medium"
+               th:href="@{/ui/events/{id}(id=${e.eventId})}"><i class="bi bi-calendar-event me-1"></i><span th:text="${e.notificationTitle}">title</span></a>
+            <span th:unless="${(e.notificationId != null or e.eventId != null) and e.type.name() != 'DELETED'}" th:text="${e.notificationTitle}">title</span>
           </td>
           <td class="small" th:text="${groupNames.get(e.group) ?: e.group}">group</td>
           <td class="small">

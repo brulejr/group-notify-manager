@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{ui/layout :: page(title=${existing == null} ? 'New event' : 'Edit ' + ${existing.title}, active='events', content=~{::main})}">
+<body>
+<main class="console-content">
+  <div class="page-header">
+    <div>
+      <div class="small mb-1">
+        <a th:if="${existing != null}" th:href="@{/ui/events/{id}(id=${existing.id})}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Back to it</a>
+        <a th:if="${existing == null}" th:href="@{/ui/events}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Events</a>
+      </div>
+      <h1 th:text="${existing == null} ? 'New event' : 'Edit ' + ${existing.title}">New event</h1>
+      <p class="lead-text">Something your group holds, once or on a schedule, and the reminders sent around each occurrence. Its
+        properties, a location say, can be used in its words as <code>{{event.location}}</code>.</p>
+    </div>
+  </div>
+
+  <!--/* The whole form is redrawn when it is refused, with each problem against its input. It shares the
+         notification form's body editor, schedule and deliveries, and its class, which drives them. */-->
+  <form th:fragment="form" id="event-form" class="notification-form event-form" novalidate hx-target="this" hx-swap="outerHTML" hx-disinherit="*"
+        th:hx-post="${existing == null} ? @{/ui/events} : @{/ui/events/{id}(id=${existing.id})}"
+        th:attr="data-next-index=${rows.size()},data-next-reminder=${reminderRows.size()},data-next-property=${propertyRows.size()}">
+    <div th:replace="~{ui/layout :: toast(${toast})}"></div>
+    <div class="row g-4">
+      <div class="col-xl-8">
+
+        <!--/* ---- the event ---- */-->
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-calendar-event"></i>Event</div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-5">
+                <label class="form-label fw-semibold" for="group">Group</label>
+                <select class="form-select" id="group" name="group" th:classappend="${errors.containsKey('group')} ? 'is-invalid'">
+                  <option value="" th:selected="${#strings.isEmpty(form.group)}">Choose a group…</option>
+                  <option th:each="g : ${editableGroups}" th:value="${g}" th:text="${groupNames.get(g) ?: g}" th:selected="${g == form.group}">group</option>
+                </select>
+                <div class="invalid-feedback" th:text="${errors.get('group')}"></div>
+                <div class="form-text">Its members see and manage it.</div>
+              </div>
+              <div class="col-md-7">
+                <label class="form-label fw-semibold" for="title">Title</label>
+                <input class="form-control" id="title" name="title" th:value="${form.title}" placeholder="e.g. Monthly club meeting"
+                       th:classappend="${errors.containsKey('title')} ? 'is-invalid'" maxlength="200">
+                <div class="invalid-feedback" th:text="${errors.get('title')}"></div>
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold" for="subject">Subject</label>
+                <input class="form-control" id="subject" name="subject" th:value="${form.subject}" placeholder="e.g. Club meeting {{event.when}} at {{event.location}}"
+                       th:classappend="${errors.containsKey('subject')} ? 'is-invalid'" maxlength="300">
+                <div class="invalid-feedback" th:text="${errors.get('subject')}"></div>
+                <div class="form-text">Every reminder sends this subject and the body below, unless it has its own.</div>
+              </div>
+              <div th:replace="~{ui/notifications/form :: bodyEditor}"></div>
+            </div>
+          </div>
+        </div>
+
+        <!--/* ---- properties ---- */-->
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-card-list"></i>Properties
+            <button type="button" class="btn btn-sm btn-outline-primary ms-auto" th:hx-get="@{/ui/events/property}"
+                    hx-vals="js:{index: notifyNextIndex('nextProperty')}" hx-target="#property-list" hx-swap="beforeend">
+              <i class="bi bi-plus-lg me-1"></i>Add property</button>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-danger py-2 small" th:each="e : ${propertyErrors}" th:text="${e.substring(0, 1).toUpperCase() + e.substring(1)}">error</div>
+            <div id="property-list" class="row-list">
+              <th:block th:each="p : ${propertyRows}"><div th:replace="~{ui/events/parts :: property}"></div></th:block>
+            </div>
+            <p class="small text-body-secondary mb-0">A name such as <code>location</code> or <code>net_control</code> is used in the words as
+              <code>{{event.location}}</code>.</p>
+          </div>
+        </div>
+
+        <!--/* ---- when ---- */-->
+        <div th:replace="~{ui/notifications/form :: scheduleCard}"></div>
+
+        <!--/* ---- reminders ---- */-->
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-alarm"></i>Reminders
+            <button type="button" class="btn btn-sm btn-outline-primary ms-auto" th:hx-get="@{/ui/events/reminder}"
+                    hx-vals="js:{index: notifyNextIndex('nextReminder')}" hx-target="#reminder-list" hx-swap="beforeend">
+              <i class="bi bi-plus-lg me-1"></i>Add reminder</button>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-danger py-2 small" th:each="e : ${reminderErrors}" th:text="${e.substring(0, 1).toUpperCase() + e.substring(1)}">error</div>
+            <div id="reminder-list" class="row-list">
+              <th:block th:each="r : ${reminderRows}"><div th:replace="~{ui/events/parts :: reminder}"></div></th:block>
+            </div>
+            <p class="small text-body-secondary mb-0">Sent for each occurrence. Days and weeks keep the local time: "1 day before" a 7 PM meeting is
+              7 PM the day before.</p>
+          </div>
+        </div>
+
+        <!--/* ---- deliveries ---- */-->
+        <div th:replace="~{ui/notifications/form :: deliveriesCard}"></div>
+      </div>
+
+      <!--/* ---- side ---- */-->
+      <div class="col-xl-4">
+        <div class="form-side">
+          <div class="card mb-4">
+            <div class="card-body">
+              <div class="form-check form-switch mb-3" th:if="${existing == null}">
+                <input type="hidden" name="paused" value="false">
+                <input class="form-check-input" type="checkbox" role="switch" id="paused" name="paused" value="true" th:checked="${form.paused}">
+                <label class="form-check-label" for="paused">Start paused</label>
+              </div>
+              <div class="small text-body-secondary mb-3" th:if="${existing != null}">
+                Status: <span th:replace="~{ui/layout :: status(${existing.status})}"></span>.
+              </div>
+              <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary">
+                  <span class="htmx-indicator spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                  <i class="bi bi-check-lg me-1"></i><span th:text="${existing == null} ? 'Create event' : 'Save changes'">Save</span></button>
+                <a class="btn btn-outline-secondary" th:href="${existing == null} ? @{/ui/events} : @{/ui/events/{id}(id=${existing.id})}">Cancel</a>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><i class="bi bi-braces"></i>Placeholders</div>
+            <div class="card-body small">
+              <p class="text-body-secondary">The event's own, filled for each occurrence:</p>
+              <dl class="props placeholders">
+                <th:block th:each="p : ${eventPlaceholders}">
+                  <dt><code th:text="'{{' + ${p.key} + '}}'">{{event.date}}</code></dt><dd th:text="${p.value}">the date</dd>
+                </th:block>
+                <dt><code>{{event.<em>name</em>}}</code></dt><dd>each property, by its name</dd>
+              </dl>
+              <p class="text-body-secondary">And as for any notification, filled as it is sent:</p>
+              <dl class="props placeholders mb-0">
+                <th:block th:each="p : ${placeholders}">
+                  <dt><code th:text="'{{' + ${p.key} + '}}'">{{date}}</code></dt><dd th:text="${p.value}">the date</dd>
+                </th:block>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</main>
+</body>
+</html>

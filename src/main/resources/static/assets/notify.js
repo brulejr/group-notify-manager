@@ -271,19 +271,25 @@
     });
   });
 
-  // ---- delivery rows ----
+  // ---- rows: deliveries, and an event's reminders and properties ----
 
-  /** The next free delivery row number; rows are numbered as they are added and may have gaps. */
-  window.notifyNextIndex = function () {
-    var form = document.getElementById('notification-form');
-    var next = parseInt(form.dataset.nextIndex || '0', 10);
-    form.dataset.nextIndex = String(next + 1);
+  /**
+   * The next free row number of a kind of row, counted on the form: deliveries by default,
+   * or e.g. 'nextReminder'. Rows are numbered as they are added and may have gaps.
+   */
+  window.notifyNextIndex = function (counter) {
+    var key = counter || 'nextIndex';
+    var form = document.querySelector('form.notification-form');
+    var next = parseInt(form.dataset[key] || '0', 10);
+    form.dataset[key] = String(next + 1);
     return next;
   };
 
   document.addEventListener('click', function (event) {
     var button = event.target.closest('[data-remove-delivery]');
     if (button) button.closest('.delivery-card').remove();
+    var row = event.target.closest('[data-remove-row]');
+    if (row) row.closest('[data-row]').remove();
   });
 
   // ---- every piece of content htmx adds, the first page included ----

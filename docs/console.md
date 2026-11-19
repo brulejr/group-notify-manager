@@ -43,6 +43,31 @@ without internet.
 
 A refused form is redrawn with each problem against its input.
 
+## Events
+
+**Events** in the menu: a group's meetings, nets and field days, each with reminders
+around every occurrence. Any member of the group creates and manages them.
+
+- **Event**: group, title, and the subject and body every reminder sends, with the
+  placeholders listed beside the form: `{{event.when}}`, `{{event.date}}`, one
+  `{{event.<name>}}` per property, and the standard ones.
+- **Properties**: name/value pairs, e.g. `location` → `Town hall`.
+- **Schedule**: one-off, cron or pattern, as for a notification; each run is an
+  occurrence.
+- **Reminders**: how long before or after each occurrence, or at its start, each
+  switchable off, each with its own subject and body if you open it (the speech
+  bubble), in Markdown.
+- **Deliveries**: the group's instances, as for a notification, used by every reminder.
+
+An event's page lists its coming occurrences with the reminders each will be sent, and
+each one's **note**, as it reads: words for that occurrence's messages only, such as
+"This week: guest speaker". **Add note** or **Edit note** opens the occurrence on a page
+of its own, with the same editor as the body, Markdown or rich text with its preview,
+so the event's page never carries more than one heavy editor. Saving an empty note
+removes it. **Send now** sends the
+event's own words for its next occurrence; **Test** on a delivery sends through it
+alone. Pausing holds every reminder; resuming picks up from now.
+
 ## Sending by hand
 
 **Send now** sends through every enabled delivery and does not move the schedule.

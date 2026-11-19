@@ -32,6 +32,8 @@ of the boot jar) imports `.env` and sets the development user.
 | `notify.audit.store` | `AUDIT_STORE` | `postgres` | or `memory` |
 | `notify.audit.retention` | | 365d | |
 | `notify.instances.store` | `INSTANCE_STORE` | `postgres` | or `memory` |
+| `notify.events.store` | `EVENT_STORE` | `postgres` | or `memory` |
+| `notify.events.max-reminders`, `.max-properties`, `.max-deliveries` | | 20, 30, 10 | Per event |
 | `notify.instances.secret-key` | `NOTIFY_SECRET_KEY` | none: a key for the run | 32 bytes in base64; encrypts instance secrets. Back it up |
 | `notify.dispatch.enabled` | | true | Off: nothing is sent on schedule |
 | `notify.dispatch.poll-interval` | | 15s | |

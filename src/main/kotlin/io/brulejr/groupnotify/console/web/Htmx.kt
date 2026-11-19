@@ -29,6 +29,9 @@ object Htmx {
     /** Raised after any notification changes, so every list of them reloads. */
     const val NOTIFICATIONS_CHANGED = "notificationsChanged"
 
+    /** Raised after any event changes, so its page and every list of events reload. */
+    const val EVENTS_CHANGED = "eventsChanged"
+
     /** Raised after a delivery instance is deleted, so the list of them reloads. */
     const val INSTANCES_CHANGED = "instancesChanged"
 }

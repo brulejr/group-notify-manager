@@ -12,6 +12,9 @@ variables:
   - name: notification_id
     value: ""
     description: "Copy the id Create Notification returns here"
+  - name: event_id
+    value: ""
+    description: "Copy the id Create Event returns here"
   - name: instance_id
     value: ""
     description: "Copy the id Create Instance returns here; notifications send through it"

@@ -70,6 +70,8 @@ class NotificationPageController(
     private val clock: Clock,
 ) {
 
+    private val rowsHelper = DeliveryRows(deliveries, instances, groups)
+
     // ---- the list ----
 
     @GetMapping
@@ -164,14 +166,14 @@ class NotificationPageController(
     @GetMapping("/delivery")
     fun deliveryRow(user: NotifyUser, @RequestParam instance: UUID, @RequestParam index: Int, model: Model): String {
         val chosen = instances.find(instance, user) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "No such delivery instance")
-        model.addAttribute("row", deliveryRow(index, NotificationForm.Delivery(instance = chosen.id.toString()), emptyMap()))
+        model.addAttribute("row", rowsHelper.row(index, NotificationForm.Delivery(instance = chosen.id.toString()), emptyMap()))
         return "ui/notifications/parts :: delivery"
     }
 
     /** The Add delivery menu: [group]'s instances. Fetched again whenever the form's group changes. */
     @GetMapping("/instances")
     fun instanceMenu(user: NotifyUser, @RequestParam(defaultValue = "") group: String, model: Model): String {
-        menuModel(user, group, model)
+        rowsHelper.menu(user, group, model)
         return "ui/notifications/parts :: instanceMenu"
     }
 
@@ -317,26 +319,7 @@ class NotificationPageController(
     private fun row(user: NotifyUser, n: Notification) =
         NotificationRow(n, groups.displayName(n.group), notifications.canEdit(user, n), badges(n).toMutableList())
 
-    private fun badges(n: Notification) = n.deliveries.map { d ->
-        val instance = instances.get(d.instance)
-        val plugin = instance?.let { deliveries.plugin(it.plugin) }
-        val labels = plugin?.fields.orEmpty().associate { it.key to it.label }
-        DeliveryBadge(
-            id = d.id,
-            name = instance?.name ?: "Deleted instance",
-            pluginName = plugin?.name ?: instance?.plugin ?: "unknown",
-            icon = plugin?.icon ?: "question-circle",
-            summary = instance?.let(instances::summary) ?: "it no longer exists",
-            overridden = d.overrides.keys.map { labels[it] ?: it }.toMutableList(),
-            enabled = d.enabled,
-            ready = instance != null && plugin?.ready == true,
-            reason = when {
-                instance == null -> "its instance was deleted"
-                plugin == null -> "${instance.plugin} is not installed"
-                else -> plugin.reason
-            },
-        )
-    }
+    private fun badges(n: Notification) = rowsHelper.badges(n.deliveries)
 
     private fun detailModel(user: NotifyUser, n: Notification, model: Model) {
         val now = clock.instant()
@@ -355,7 +338,7 @@ class NotificationPageController(
 
     private fun formModel(user: NotifyUser, existing: Notification?, form: NotificationForm, problems: List<NotificationProblem>, model: Model) {
         val errors = problems.associate { it.field to it.reason }
-        val rows = form.deliveries.mapIndexed { index, delivery -> deliveryRow(index, delivery, errors) }
+        val rows = form.deliveries.mapIndexed { index, delivery -> rowsHelper.row(index, delivery, errors) }
         val editable = groups.editable(user, notifications.groupsInUse()).toMutableList()
         if (form.group.isNotBlank() && form.group !in editable) editable += form.group
         model.addAttribute("existing", existing)
@@ -363,7 +346,7 @@ class NotificationPageController(
         model.addAttribute("errors", HashMap(errors))
         model.addAttribute("deliveryErrors", errors.filterKeys { it == "deliveries" }.values.toMutableList())
         model.addAttribute("rows", rows.toMutableList())
-        menuModel(user, form.group, model)
+        rowsHelper.menu(user, form.group, model)
         model.addAttribute("editableGroups", editable)
         model.addAttribute("formats", BodyFormat.entries.toMutableList())
         model.addAttribute("kinds", ScheduleKind.entries.toMutableList())
@@ -374,51 +357,8 @@ class NotificationPageController(
         model.addAttribute("isAdmin", user.admin)
     }
 
-    /** The Add delivery menu's model: the instances of [group], if [user] may see it. */
-    private fun menuModel(user: NotifyUser, group: String, model: Model) {
-        val choices = if (group.isBlank() || !groups.canView(user, group)) emptyList() else instances.forGroup(group)
-        val plugins = deliveries.plugins().associateBy { it.id }
-        model.addAttribute("menuGroup", group)
-        model.addAttribute("instances", choices.map { InstanceChoice(it.id, it.name, plugins[it.plugin]?.name ?: it.plugin, plugins[it.plugin]?.icon ?: "send", instances.summary(it)) }.toMutableList())
-        model.addAttribute("canProvision", group.isNotBlank() && instances.canManage(user, group))
-    }
-
-    /**
-     * One row: the instance's name and where it sends, and an input for each overridable
-     * field showing what this notification will use, its own value or the instance's.
-     */
-    private fun deliveryRow(index: Int, delivery: NotificationForm.Delivery, errors: Map<String, String>): DeliveryRow {
-        val error = errors["deliveries[$index].instance"]
-        val instance: PluginInstance? = runCatching { UUID.fromString(delivery.instance) }.getOrNull()?.let(instances::get)
-        val plugin = instance?.let { deliveries.plugin(it.plugin) }
-        if (instance == null || plugin == null) {
-            return DeliveryRow(
-                index, delivery.id, delivery.instance, if (instance == null) "Deleted instance" else instance.name, plugin,
-                if (instance == null) "it no longer exists: remove this delivery" else "${instance.plugin} is not installed",
-                delivery.enabled, mutableListOf(), error,
-            )
-        }
-        val effective = instances.effective(instance, delivery.overrides)
-        val own = instances.overrides(instance, delivery.overrides)
-        val inputs = plugin.fields.filter { it.overridable }.map { field ->
-            FieldInput(
-                field = field,
-                name = "deliveries[$index].overrides.${field.key}",
-                inputId = "d$index-${field.key}",
-                value = delivery.overrides[field.key] ?: effective[field.key].orEmpty(),
-                saved = false,
-                error = errors["deliveries[$index].overrides.${field.key}"],
-                note = if (field.key in own) "Set for this notification" else null,
-            )
-        }
-        return DeliveryRow(
-            index, delivery.id, instance.id.toString(), instance.name, plugin, instances.summary(instance),
-            delivery.enabled, inputs.toMutableList(), error,
-        )
-    }
-
-    private companion object {
-        /** The zones offered first; any IANA zone can be typed. */
+    companion object {
+        /** The zones offered first; any IANA zone can be typed. Events offer the same. */
         val ZONES = listOf(
             "America/New_York", "America/Chicago", "America/Denver", "America/Phoenix", "America/Los_Angeles",
             "America/Anchorage", "Pacific/Honolulu", "America/Halifax", "Europe/London", "Europe/Berlin", "UTC",

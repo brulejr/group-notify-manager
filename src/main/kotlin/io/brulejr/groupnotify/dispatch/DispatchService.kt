@@ -15,6 +15,8 @@ import io.brulejr.groupnotify.audit.DispatchTrigger
 import io.brulejr.groupnotify.content.ContentService
 import io.brulejr.groupnotify.delivery.DeliveryOutcome
 import io.brulejr.groupnotify.delivery.DeliveryService
+import io.brulejr.groupnotify.event.Event
+import io.brulejr.groupnotify.event.EventService
 import io.brulejr.groupnotify.group.GroupService
 import io.brulejr.groupnotify.instance.InstanceService
 import io.brulejr.groupnotify.instance.SecretUnreadableException
@@ -22,6 +24,7 @@ import io.brulejr.groupnotify.notification.Notification
 import io.brulejr.groupnotify.notification.NotificationDelivery
 import io.brulejr.groupnotify.notification.NotificationService
 import io.brulejr.groupnotify.plugin.DeliveryResult
+import io.brulejr.groupnotify.plugin.NotificationMessage
 import io.brulejr.groupnotify.security.NotifyUser
 import org.slf4j.LoggerFactory
 import java.time.Clock
@@ -35,7 +38,8 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * Sends notifications: on schedule, when [runDue] finds them due, and on demand.
+ * Sends notifications and events' reminders: on schedule, when [runDue] finds them due,
+ * and on demand.
  *
  * A due notification is moved on to its next run *before* it is sent. If the
  * application stops partway, that run is not sent twice on restart; it may not finish
@@ -45,6 +49,7 @@ import java.util.concurrent.atomic.AtomicReference
  */
 class DispatchService(
     private val notifications: NotificationService,
+    private val events: EventService,
     private val deliveries: DeliveryService,
     private val instances: InstanceService,
     private val content: ContentService,
@@ -78,9 +83,12 @@ class DispatchService(
         lastPollAt.set(now)
         return try {
             val due = notifications.due(now, datafill.batchSize)
-            workers.invokeAll(due.map { notification -> Callable { runSafely(notification, now) } }).forEach { it.get() }
+            val dueEvents = events.due(now, datafill.batchSize)
+            val tasks = due.map { notification -> Callable { runSafely(notification, now) } } +
+                dueEvents.map { event -> Callable { runEventSafely(event, now) } }
+            workers.invokeAll(tasks).forEach { it.get() }
             lastError.set(null)
-            due.size
+            due.size + dueEvents.size
         } catch (e: Exception) {
             lastError.set(e.message ?: e.javaClass.simpleName)
             throw e
@@ -97,6 +105,21 @@ class DispatchService(
         val chosen = notification.deliveries.filter { if (deliveryId != null) it.id == deliveryId else it.enabled }
         if (chosen.isEmpty()) return SendResult.NothingToSend
         return SendResult.Sent(deliver(notification, chosen, clock.instant(), DispatchTrigger.MANUAL, user.actor))
+    }
+
+    /**
+     * Sends an event's message now, for its next occurrence, outside its reminders, which
+     * it leaves alone. With [deliveryId], only that delivery: a test of one channel.
+     */
+    fun sendEventNow(id: UUID, user: NotifyUser, deliveryId: UUID? = null): SendResult {
+        val event = events.find(id, user) ?: return SendResult.NotFound
+        if (!events.canEdit(user, event)) return SendResult.Forbidden
+        val chosen = event.deliveries.filter { if (deliveryId != null) it.id == deliveryId else it.enabled }
+        val occurrence = event.schedule.nextAfter(clock.instant()) ?: event.schedule.runAt
+        if (chosen.isEmpty() || occurrence == null) return SendResult.NothingToSend
+        val now = clock.instant()
+        val message = events.message(event, occurrence, null, groups.displayName(event.group), now)
+        return SendResult.Sent(deliver(Subject.of(event), message, chosen, DispatchTrigger.MANUAL, user.actor))
     }
 
     fun stats() = DispatchStats(polls.get(), runs.get(), skipped.get(), sent.get(), failed.get(), lastPollAt.get(), lastError.get())
@@ -132,20 +155,68 @@ class DispatchService(
         if (next == null) record(notification, AuditEventType.COMPLETED, AuditEvent.SCHEDULER, DispatchTrigger.SCHEDULE, "no runs left")
     }
 
+    private fun runEventSafely(event: Event, now: Instant) = try {
+        runEvent(event, now)
+    } catch (e: Exception) {
+        log.error("dispatching event '{}' ({}) failed", event.title, event.id, e)
+    }
+
+    private fun runEvent(event: Event, now: Instant) {
+        val due = checkNotNull(event.next)
+        val (moved, next) = events.advance(event, now, datafill.misfireGrace)
+        if (!moved) {
+            log.debug("event '{}' changed while being dispatched; leaving it", event.title)
+            return
+        }
+        runs.incrementAndGet()
+        val reminder = event.reminder(due.reminder)
+        val late = Duration.between(due.sendAt, now)
+        when {
+            // Removed since it was planned: nothing to send.
+            reminder == null -> Unit
+            late > datafill.misfireGrace -> {
+                skipped.incrementAndGet()
+                record(Subject.of(event), AuditEventType.SKIPPED, AuditEvent.SCHEDULER, DispatchTrigger.SCHEDULE,
+                    "${reminder.describe()} ${due.occurrence}: due at ${due.sendAt}, missed by ${late.toMinutes()} min (grace ${datafill.misfireGrace.toMinutes()} min)")
+            }
+            else -> {
+                val message = events.message(event, due.occurrence, reminder, groups.displayName(event.group), due.sendAt)
+                deliver(Subject.of(event), message, event.deliveries.filter { it.enabled }, DispatchTrigger.SCHEDULE, AuditEvent.SCHEDULER)
+            }
+        }
+        if (next == null) record(Subject.of(event), AuditEventType.COMPLETED, AuditEvent.SCHEDULER, DispatchTrigger.SCHEDULE, "no reminders left")
+    }
+
+    /** What a send is recorded against: a notification or an event. */
+    private data class Subject(val notificationId: UUID?, val eventId: UUID?, val title: String, val group: String) {
+        companion object {
+            fun of(n: Notification) = Subject(n.id, null, n.title, n.group)
+            fun of(e: Event) = Subject(null, e.id, e.title, e.group)
+        }
+    }
+
     private fun deliver(
         notification: Notification,
         chosen: List<NotificationDelivery>,
         at: Instant,
         trigger: DispatchTrigger,
         actor: String,
+    ): List<DeliveryReport> =
+        deliver(Subject.of(notification), content.render(notification, groups.displayName(notification.group), at), chosen, trigger, actor)
+
+    private fun deliver(
+        subject: Subject,
+        message: NotificationMessage,
+        chosen: List<NotificationDelivery>,
+        trigger: DispatchTrigger,
+        actor: String,
     ): List<DeliveryReport> {
-        val message = content.render(notification, groups.displayName(notification.group), at)
         return chosen.map { delivery ->
             val instance = instances.get(delivery.instance)
             val (outcome, summary) = when {
                 instance == null -> refused("its delivery instance was deleted") to "deleted instance"
                 // Checked when saved; checked again in case the notification moved group since.
-                instance.group != notification.group -> refused("${instance.name} belongs to another group") to instance.name
+                instance.group != subject.group -> refused("${instance.name} belongs to another group") to instance.name
                 else -> {
                     val target = try {
                         instances.target(instance, delivery.overrides)
@@ -163,15 +234,15 @@ class DispatchService(
                 is DeliveryResult.Failed -> Triple(AuditEventType.FAILED, result.reason, null)
             }
             (if (outcome.delivered) sent else failed).incrementAndGet()
-            if (!outcome.delivered) log.warn("'{}' via {} ({}) failed: {}", notification.title, plugin, summary, detail)
+            if (!outcome.delivered) log.warn("'{}' via {} ({}) failed: {}", subject.title, plugin, summary, detail)
             audit.record(
                 AuditEvent(
                     occurredAt = clock.instant(),
                     type = type,
                     actor = actor,
-                    notificationId = notification.id,
-                    notificationTitle = notification.title,
-                    group = notification.group,
+                    notificationId = subject.notificationId,
+                    notificationTitle = subject.title,
+                    group = subject.group,
                     deliveryId = delivery.id,
                     plugin = plugin,
                     target = summary,
@@ -179,6 +250,7 @@ class DispatchService(
                     detail = detail,
                     reference = reference,
                     attempts = outcome.attempts,
+                    eventId = subject.eventId,
                 ),
             )
             DeliveryReport(delivery, instance?.name ?: "a deleted instance", summary, outcome)
@@ -188,17 +260,21 @@ class DispatchService(
     /** A delivery that never reached its plugin. */
     private fun refused(reason: String) = DeliveryOutcome(DeliveryResult.Failed(reason), 0)
 
-    private fun record(notification: Notification, type: AuditEventType, actor: String, trigger: DispatchTrigger, detail: String) {
+    private fun record(notification: Notification, type: AuditEventType, actor: String, trigger: DispatchTrigger, detail: String) =
+        record(Subject.of(notification), type, actor, trigger, detail)
+
+    private fun record(subject: Subject, type: AuditEventType, actor: String, trigger: DispatchTrigger, detail: String) {
         audit.record(
             AuditEvent(
                 occurredAt = clock.instant(),
                 type = type,
                 actor = actor,
-                notificationId = notification.id,
-                notificationTitle = notification.title,
-                group = notification.group,
+                notificationId = subject.notificationId,
+                notificationTitle = subject.title,
+                group = subject.group,
                 trigger = trigger,
                 detail = detail,
+                eventId = subject.eventId,
             ),
         )
     }

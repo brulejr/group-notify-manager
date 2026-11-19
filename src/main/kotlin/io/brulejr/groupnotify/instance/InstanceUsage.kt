@@ -11,12 +11,12 @@ package io.brulejr.groupnotify.instance
 import java.util.UUID
 
 /**
- * Which notifications send through an instance, so one in use is not deleted from under
- * them. Provided by the notification feature, which depends on this one rather than the
- * other way round.
+ * Which notifications or events send through an instance, so one in use is not deleted
+ * from under them. Provided by the notification and event features, which depend on
+ * this one rather than the other way round; every one is asked.
  */
 fun interface InstanceUsage {
 
-    /** The titles of the notifications with a delivery through [instanceId]. */
+    /** The titles of what has a delivery through [instanceId]. */
     fun notificationsUsing(instanceId: UUID): List<String>
 }

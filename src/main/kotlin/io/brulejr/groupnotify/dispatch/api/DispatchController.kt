@@ -30,7 +30,15 @@ class DispatchController(private val dispatch: DispatchService) {
     /** Sends a notification now, or only one of its deliveries; its schedule is left alone. */
     @PostMapping("/api/notifications/{id}/send")
     fun send(user: NotifyUser, @PathVariable id: UUID, @RequestParam(required = false) deliveryId: UUID?): ResponseEntity<Any> =
-        when (val result = dispatch.sendNow(id, user, deliveryId)) {
+        respond(dispatch.sendNow(id, user, deliveryId))
+
+    /** Sends an event's message now, for its next occurrence, or through one delivery only; its reminders are left alone. */
+    @PostMapping("/api/events/{id}/send")
+    fun sendEvent(user: NotifyUser, @PathVariable id: UUID, @RequestParam(required = false) deliveryId: UUID?): ResponseEntity<Any> =
+        respond(dispatch.sendEventNow(id, user, deliveryId))
+
+    private fun respond(result: SendResult): ResponseEntity<Any> =
+        when (result) {
             is SendResult.Sent -> ResponseEntity.ok(
                 result.reports.map {
                     DeliveryReportView(it.delivery.id, it.delivery.instance, it.name, it.summary, it.outcome.delivered, it.outcome.detail, it.outcome.attempts)

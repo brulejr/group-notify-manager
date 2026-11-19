@@ -34,7 +34,8 @@ gets them.
 | `content` | The body in every form: Markdown → HTML, HTML sanitising, HTML → Markdown / text, placeholders |
 | `delivery` | The plugin host: loading, settings, the context lent to plugins, retries, masking |
 | `instance` | Plugins provisioned per group as named instances: credentials, defaults, encryption of secrets |
-| `dispatch` | The scheduler that finds due notifications, and Send now |
+| `event` | Events: a group's dated or recurring happenings, their properties, reminders relative to each occurrence, and occurrence notes |
+| `dispatch` | The scheduler that finds due notifications and event reminders, and Send now |
 | `audit` | The history of changes and deliveries |
 | `console` | The dashboard and the pieces every page shares |
 | `platform` | Clock, PostgreSQL schema migration, store type |
@@ -150,6 +151,39 @@ hashtags in the subject; topic settings applied after posting; no retry once the
 post's outcome is unclear) and **Discord** (channel webhook, embed or plain, explicit
 `allowed_mentions`).
 
+## Events
+
+An **event** is a second kind of message, beside notifications: something a group
+holds once or on a schedule (a meeting, a net, a field day), with reminders sent
+relative to each occurrence. It belongs to one group, whose members see and manage it,
+and sends through that group's delivery instances, exactly as a notification does.
+
+- Its **schedule** is a notification's (one-off, cron or pattern); each run of it is an
+  **occurrence**.
+- Its **properties** are name/value pairs, in the author's order, used in its words as
+  `{{event.<name>}}`; beside them `{{event.date}}`, `{{event.time}}`,
+  `{{event.weekday}}`, `{{event.datetime}}` (of the occurrence) and `{{event.when}}`
+  (in 2 hours, now, 1 day ago), with the standard placeholders too.
+- Its **reminders** are each an offset, before, at the start or after, in minutes,
+  hours, days or weeks. Minutes and hours are elapsed time; days and weeks are counted
+  on the local calendar, so "1 day before" a 7 PM meeting is 7 PM the day before. A
+  reminder sends the event's subject and body unless it has its own (Markdown).
+- An **occurrence note** is words for one occurrence only ("This week: guest
+  speaker"), in Markdown or HTML like a body, edited on a page of its own with the
+  body's editor. It is converted to each message's format and added after the body, or
+  placed where the body writes `{{occurrence.note}}`; in a subject that placeholder
+  gives its plain text. Notes of occurrences the schedule no longer has, or long past,
+  are dropped.
+- Its **deliveries** are chosen once, for every reminder.
+
+`EventCalendar` orders every enabled reminder of every occurrence by send time, then
+occurrence, then the reminder's place, so two that fall at the same instant (a weekly
+event's "1 week before" and "at the start") are both sent, in a fixed order. The next
+one is stored with the event (`next_run_at`, `next_occurrence`, `next_reminder`).
+
+The schedule and delivery checks are shared with notifications (`ScheduleRules`,
+`DeliveryRules`), as are the form's body editor, schedule and deliveries.
+
 ## Dispatch
 
 A poller calls `DispatchService.runDue()` every `poll-interval`. For each due
@@ -179,7 +213,8 @@ History is filtered by group exactly as notifications are.
 ## Storage
 
 PostgreSQL in its own schema (`group_notify`), migrated by Flyway on first use; or
-memory, for tests and trying it out. Tables: `notifications` (a pattern schedule in `pattern`, since V3), `deliveries` (cascade
+memory, for tests and trying it out. Tables: `notifications` (a pattern schedule in `pattern`, since V3), `events` and
+`event_deliveries` (V4; properties, reminders and notes as `jsonb`), `deliveries` (cascade
 delete with their notification; a foreign key to `plugin_instances`, so an instance in
 use cannot be deleted), `plugin_instances` (configuration as `jsonb`, secret values
 sealed as `enc:v1:…`), `audit_events`.

@@ -20,6 +20,8 @@ import java.util.UUID
  * @property target the plugin's summary of where a delivery went, never a secret.
  * @property reference the receiving service's own id for a delivery, when it gives one.
  * @property attempts how many tries a delivery took.
+ * @property eventId the event it concerns, for an event's changes and reminders; then
+ *   [notificationId] is null and [notificationTitle] is the event's title.
  */
 data class AuditEvent(
     val id: Long? = null,
@@ -36,6 +38,7 @@ data class AuditEvent(
     val detail: String = "",
     val reference: String? = null,
     val attempts: Int? = null,
+    val eventId: UUID? = null,
 ) {
     companion object {
         const val SCHEDULER = "scheduler"

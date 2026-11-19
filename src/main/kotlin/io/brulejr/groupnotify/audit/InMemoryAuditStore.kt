@@ -46,6 +46,7 @@ class InMemoryAuditStore(private val capacity: Int = 10_000) : AuditPort {
     private fun matches(event: AuditEvent, query: AuditQuery) =
         (query.groups == null || event.group in query.groups) &&
             (query.notificationId == null || event.notificationId == query.notificationId) &&
+            (query.eventId == null || event.eventId == query.eventId) &&
             (query.types == null || event.type in query.types) &&
             (query.since == null || event.occurredAt >= query.since)
 }

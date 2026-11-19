@@ -55,7 +55,7 @@
       <a th:href="@{/ui/notifications}" class="nav-link" th:classappend="${active == 'notifications'} ? 'active'">
         <i class="bi bi-bell"></i><span>All notifications</span></a>
       <a th:href="@{/ui/notifications/new}" class="nav-link" th:classappend="${active == 'new'} ? 'active'"
-         th:if="${me != null and me.editor}">
+         th:if="${canCreate}">
         <i class="bi bi-plus-circle"></i><span>New notification</span></a>
       <a th:href="@{/ui/history}" class="nav-link" th:classappend="${active == 'history'} ? 'active'">
         <i class="bi bi-clock-history"></i><span>History</span></a>
@@ -103,7 +103,6 @@
               <div class="small text-body-secondary" th:if="${me.email != null}" th:text="${me.email}">dev@example.org</div>
               <div class="mt-2 d-flex flex-wrap gap-1">
                 <span class="badge text-bg-primary" th:if="${me.admin}"><i class="bi bi-shield-lock me-1"></i>Admin</span>
-                <span class="badge text-bg-secondary" th:unless="${me.editor}">Read only</span>
                 <span class="badge badge-soft bg-body-tertiary text-body-secondary border-secondary-subtle"
                       th:each="g : ${me.groups}" th:text="${g}">group</span>
               </div>

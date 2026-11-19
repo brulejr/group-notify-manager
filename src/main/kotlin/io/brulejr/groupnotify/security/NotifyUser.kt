@@ -14,8 +14,7 @@ import java.io.Serializable
  * The person making a request, as Authelia describes them.
  *
  * @property groups every group Authelia lists for them, notification groups or not.
- * @property admin a member of `notify.security.admin-group`: sees every group.
- * @property editor may create, change and send notifications in their groups.
+ * @property admin a member of `notify.security.admin-group`: sees and manages every group.
  */
 data class NotifyUser(
     val username: String,
@@ -23,7 +22,6 @@ data class NotifyUser(
     val email: String?,
     val groups: Set<String>,
     val admin: Boolean,
-    val editor: Boolean,
 ) : Serializable {
 
     fun memberOf(group: String) = group in groups

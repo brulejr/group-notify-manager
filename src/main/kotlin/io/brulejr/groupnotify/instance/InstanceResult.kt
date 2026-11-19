@@ -19,7 +19,7 @@ sealed interface InstanceResult {
     /** No such instance, or not one the user may see. */
     data object NotFound : InstanceResult
 
-    /** Only admins provision instances. */
+    /** The user is in no group whose instances they could manage. */
     data object Forbidden : InstanceResult
 
     /** Not deleted: these notifications, by title, still send through it. */

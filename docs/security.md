@@ -7,8 +7,8 @@ Nothing about users or membership is stored here.
 
 | | Sees | Manages | Delivery instances | `/mgmt` |
 | --- | --- | --- | --- | --- |
-| A member of a group | That group's notifications and history | Them, unless `editor-group` is set and they are not in it | Sees the group's, without secrets, and chooses among them | no |
-| An admin (`admin-group`, default `homelab_admins`) | Every group's | Every group's | Provisions, edits and deletes every group's | yes |
+| A member of a group | That group's notifications and history | Them | The group's: creates, edits and deletes them; sees them without secrets | no |
+| An admin (`admin-group`, default `homelab_admins`) | Every group's | Every group's | Every group's | yes |
 | Anyone else | Nothing; another group's notification is *not found* | | | |
 
 A notification can only send through its own group's instances, and can change only
@@ -85,8 +85,9 @@ requests. The Bruno collection sends `X-Requested-With` on its body-less calls.
 
 ## Secrets
 
-Credentials, such as a groups.io API key or a Discord webhook URL, are entered by an
-admin on a delivery instance. They are encrypted before they are stored (AES-256-GCM,
+Credentials, such as a groups.io API key or a Discord webhook URL, are entered on a
+delivery instance by a member who manages its group, or an admin. A secret can be
+replaced, never read back, by anyone. They are encrypted before they are stored (AES-256-GCM,
 under `NOTIFY_SECRET_KEY`), never returned: the API shows `********` and the form an
 empty input, and sending either back keeps the stored value. They are opened only to
 send, and never written to the history or the log.

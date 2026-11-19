@@ -32,13 +32,37 @@ class InstanceServiceTest {
     private fun problems(result: InstanceResult) = assertIs<InstanceResult.Invalid>(result).problems.associate { it.field to it.reason }
 
     @Test
-    fun `only an admin provisions, changes or deletes an instance`() {
-        assertIs<InstanceResult.Forbidden>(service.create(draft(), alice))
-        val instance = f.club
+    fun `a group's members manage its instances, and are recorded doing so`() {
+        val mine = assertIs<InstanceResult.Saved>(service.create(draft(), alice)).instance
+        assertEquals("alice", mine.createdBy)
 
-        assertIs<InstanceResult.Forbidden>(service.update(instance.id, draft(name = "Mine"), alice))
-        assertIs<InstanceResult.Forbidden>(service.delete(instance.id, alice))
-        assertIs<InstanceResult.Saved>(service.update(instance.id, draft(name = "Renamed"), admin))
+        assertIs<InstanceResult.Saved>(service.update(mine.id, draft(name = "Renamed"), alice))
+        assertIs<InstanceResult.Saved>(service.delete(mine.id, alice))
+        val actors = f.audit.history(admin, AuditQuery(groups = setOf("notify_club"))).map { it.actor }.toSet()
+        assertEquals(setOf("alice"), actors)
+    }
+
+    @Test
+    fun `nobody manages another group's instances, an admin manages any`() {
+        val club = f.club
+
+        // Bob is in the family group only: the club's instance is not even there for him.
+        assertEquals(InstanceResult.NotFound, service.update(club.id, draft(name = "Mine"), bob))
+        assertEquals(InstanceResult.NotFound, service.delete(club.id, bob))
+        assertEquals(mapOf("group" to "you are not a member of it"), problems(service.create(draft(name = "Mine"), bob)))
+
+        assertIs<InstanceResult.Saved>(service.update(club.id, draft(name = "Renamed"), admin))
+        assertIs<InstanceResult.Saved>(service.create(draft(group = "notify_family"), admin))
+    }
+
+    @Test
+    fun `a member can replace a secret but never read it back`() {
+        val club = f.club
+
+        assertEquals(DeliveryService.MASK, service.masked(service.find(club.id, alice)!!)["token"])
+        val replaced = assertIs<InstanceResult.Saved>(service.update(club.id, draft(config = mapOf("channel" to "general", "token" to "n3w")), alice)).instance
+        assertEquals(DeliveryService.MASK, service.masked(replaced)["token"])
+        assertEquals("n3w", service.target(replaced, emptyMap())["token"])
     }
 
     @Test

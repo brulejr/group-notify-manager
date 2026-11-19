@@ -26,7 +26,7 @@ Bruno collection in `bruno/group-notify-manager` covers every call.
 | `GET /api/audit` | History: `group`, `notificationId`, `type` (repeatable), `since`, `before`, `limit` |
 | `GET /api/plugins[/{id}]` | Plugins, their fields (and which are overridable) and readiness |
 | `GET /api/instances[?group=]`, `GET /api/instances/{id}` | Delivery instances you may see, secrets masked |
-| `POST /api/instances`, `PUT, DELETE /api/instances/{id}` | Provision, change, delete. Admins; 409 when one in use is deleted |
+| `POST /api/instances`, `PUT, DELETE /api/instances/{id}` | Provision, change, delete: those who manage the group, and admins; 409 when one in use is deleted |
 | `GET /api/groups` | Your groups with counts |
 | `POST /api/content/preview` | A body as HTML, Markdown and text |
 | `GET /api/dispatch`, `POST /api/dispatch/run` | The scheduler's state; send what is due now. Admins |

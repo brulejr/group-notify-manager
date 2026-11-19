@@ -5,7 +5,7 @@ else, a packet radio gateway, a pager, Matrix, is a plugin you write and drop in
 
 ## Instances
 
-A plugin is never used directly. An admin sets it up for one group as a named
+A plugin is never used directly. A group's members set it up for their group as a named
 **instance** on the **Delivery plugins** page, e.g. groups.io as *Club announcements*
 for `notify_club`, holding everything the plugin needs: credentials, where it sends,
 and defaults for how it posts. A group may have several instances of one plugin
@@ -18,16 +18,16 @@ a topic, never a credential or where it sends; those it changes are stored with 
 notification, and the rest follow the instance, so a later change to an instance's
 default reaches every notification that kept it.
 
-- Only admins create, edit and delete instances. Members see their groups' instances,
-  without secrets, to choose among them.
+- A group's members create, edit and delete its instances, as they do its
+  notifications; admins, every group's. Nobody else sees them. Nobody sees a secret.
 - Secret fields (an API key, a webhook URL) are encrypted with `NOTIFY_SECRET_KEY`
   (AES-256-GCM) before they are stored, never shown again, and opened only to send.
 - An instance a notification still uses cannot be deleted.
 - Changes to instances are recorded in the history, naming the fields changed but never
   a secret's value.
 
-The REST API is `/api/instances` (`?group=` to filter): `GET`, and for admins `POST`,
-`PUT /{id}` and `DELETE /{id}`. A notification's delivery is
+The REST API is `/api/instances` (`?group=` to filter): `GET`, and for those who manage the
+group `POST`, `PUT /{id}` and `DELETE /{id}`. A notification's delivery is
 `{"instance": "<id>", "overrides": {…}, "enabled": true}`.
 
 ## The bundled plugins

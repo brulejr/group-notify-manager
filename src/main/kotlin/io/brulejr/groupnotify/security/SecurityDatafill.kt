@@ -16,9 +16,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties
  *
  * @property adminGroup its members see and manage every group's notifications, and the
  *   management endpoints.
- * @property editorGroup when set, only its members (and admins) may create, change or
- *   send notifications; other members of a group can only read that group's. Unset,
- *   every member of a group may manage its notifications.
  * @property logoutUrl where the console's sign-out link goes in forward-auth mode, e.g.
  *   `https://auth.example.org/logout`. In OIDC mode sign-out is the application's own.
  * @property devUser signs in every request that carries no forward-auth headers as this
@@ -28,7 +25,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 data class SecurityDatafill(
     val mode: AuthMode = AuthMode.FORWARD_AUTH,
     val adminGroup: String = "homelab_admins",
-    val editorGroup: String? = null,
     val logoutUrl: String? = null,
     val forwardAuth: ForwardAuth = ForwardAuth(),
     val oidc: Oidc = Oidc(),

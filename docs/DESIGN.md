@@ -28,7 +28,7 @@ gets them.
 
 | Package | Responsibility |
 | --- | --- |
-| `security` | Who the user is: forward-auth headers or OIDC → `NotifyUser` (username, groups, admin, editor) |
+| `security` | Who the user is: forward-auth headers or OIDC → `NotifyUser` (username, groups, admin) |
 | `group` | Which groups hold notifications, and who may see or change a group's |
 | `notification` | Notifications and their deliveries: validation, schedule, pause/resume, stores |
 | `content` | The body in every form: Markdown → HTML, HTML sanitising, HTML → Markdown / text, placeholders |
@@ -72,8 +72,9 @@ active. A one-off completes once sent; a recurring one when it passes its end da
 Resuming picks up from now: missed runs are not sent. A one-off whose time passed while
 paused cannot be resumed without a new time.
 
-A **plugin instance** is a delivery plugin set up by an admin for one group under a
-name: every one of the plugin's field values, credentials included. Its group and
+A **plugin instance** is a delivery plugin set up for one group under a name, by whoever
+may manage that group's notifications (an admin for any group): every one of the
+plugin's field values, credentials included. Its group and
 plugin are fixed once created; its name is unique within the group.
 
 A **delivery** names one instance of the notification's own group, the notification's
@@ -85,8 +86,11 @@ given.
 
 Why instances, and not a plugin's configuration on each notification: one place to
 enter and rotate a credential, so every notification of a group posts the same way;
-and authors, who need not be trusted with credentials, can only send where an admin
-has set up for their group, changing how a post looks but never where it goes.
+and a notification can only send where its group has been set up to, changing how a
+post looks but never where it goes. Instances follow the notifications' own rule for
+who manages them, so a group runs its channels itself. A secret, once saved, is never
+shown to anyone, so managing an instance means being able to replace its credential,
+not to read it.
 
 ## Security and groups
 
@@ -99,8 +103,9 @@ Authelia signs people in; see [security.md](security.md).
 - `OIDC`: the application is an OIDC client of Authelia and reads `groups` from the ID
   token. Session-based.
 
-Roles come from groups: `admin-group` sees and manages everything and reaches
-`/mgmt`; with `editor-group` set, only its members manage notifications, others read.
+Roles come from groups, and there are two: a group's members see and manage its
+notifications and delivery instances; `admin-group` sees and manages everything and
+reaches `/mgmt`. There is no read-only role.
 A notification outside the user's groups is **not found**, not forbidden, so its
 existence is not revealed.
 

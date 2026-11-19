@@ -8,8 +8,8 @@
       <div class="small mb-1"><a th:href="@{/ui/plugins}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Delivery plugins</a></div>
       <h1 th:text="${existing == null} ? 'New delivery instance' : 'Edit ' + ${existing.name}">New delivery instance</h1>
       <p class="lead-text">A plugin set up for one group under a name: its credentials, where it sends, and the defaults its
-        notifications start with. The group's members choose among its instances when they write a notification; they can change
-        only the fields marked as defaults, and never see a secret.</p>
+        notifications start with. The group's notifications choose among its instances, and can change only the fields marked as
+        defaults. Nobody sees a secret once it is saved; it can be replaced, not read back.</p>
     </div>
   </div>
 

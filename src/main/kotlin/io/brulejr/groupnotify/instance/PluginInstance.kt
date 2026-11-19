@@ -17,7 +17,7 @@ import java.util.UUID
  * included, and the defaults a notification may override. Notifications of [group]
  * choose among their group's instances; nothing else can send through it.
  *
- * Only admins provision instances. [group] and [plugin] are fixed once it is created.
+ * [group]'s members manage its instances, and admins any group's. [group] and [plugin] are fixed once it is created.
  *
  * @property config every one of the plugin's field values, keyed by field key. Secret
  *   values are sealed by [SecretCipher], here and in the store; only

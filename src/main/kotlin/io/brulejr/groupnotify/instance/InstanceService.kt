@@ -19,13 +19,13 @@ import java.time.Clock
 import java.util.UUID
 
 /**
- * Plugin instances: provisioning them, which only admins may do, and everything the rest
- * of the application needs of one, without ever handing out its secrets.
+ * Plugin instances: provisioning them, and everything the rest of the application needs
+ * of one, without ever handing out its secrets.
  *
- * A group's members see its instances, to choose among them when writing a
- * notification, but never their secrets: [masked] is all that leaves here. The
- * secrets are sealed by [SecretCipher] before they are stored and opened only in
- * [target], to deliver.
+ * A group's members manage its instances, as they do its notifications; an admin
+ * manages every group's. Nobody else sees them. Nobody sees a secret either: [masked] is
+ * all that leaves here, and a secret can be replaced but not read back. The secrets are sealed by [SecretCipher] before they are stored and opened
+ * only in [target], to deliver.
  *
  * Every change is recorded in the audit trail, naming the fields changed but never a
  * secret's value.
@@ -57,7 +57,18 @@ class InstanceService(
     /** A group's instances, for the notifications of that group to choose among. */
     fun forGroup(group: String): List<PluginInstance> = store.list(setOf(group))
 
-    fun canManage(user: NotifyUser) = user.admin
+    /** Whether [user] may create, change and delete [group]'s instances: a member of it, or an admin. */
+    fun canManage(user: NotifyUser, group: String) = groups.canEdit(user, group) && groups.isNotificationGroup(group)
+
+    /** Whether [user] may manage any group's instances at all. */
+    fun canManageAny(user: NotifyUser) = user.admin || groups.memberGroups(user).isNotEmpty()
+
+    /**
+     * The groups [user] may create an instance in: their own notification groups, and for an
+     * admin also every group that has notifications or instances ([inUse]).
+     */
+    fun manageableGroups(user: NotifyUser, inUse: Collection<String> = emptyList()): List<String> =
+        groups.editable(user, inUse + groupsInUse())
 
     /** The titles of the notifications that send through [instance]. */
     fun usedBy(instance: PluginInstance): List<String> = usage.notificationsUsing(instance.id)
@@ -65,8 +76,9 @@ class InstanceService(
     /** Every group that has an instance. */
     fun groupsInUse(): Set<String> = store.list(null).map { it.group }.toSortedSet()
 
+    /** Refused outright for someone who may manage no group's; otherwise the group is checked with the rest. */
     fun create(draft: InstanceDraft, user: NotifyUser): InstanceResult {
-        if (!canManage(user)) return InstanceResult.Forbidden
+        if (!canManageAny(user)) return InstanceResult.Forbidden
         val built = build(draft, null, user)
         if (built is InstanceResult.Saved) {
             store.save(built.instance)
@@ -77,7 +89,7 @@ class InstanceService(
 
     fun update(id: UUID, draft: InstanceDraft, user: NotifyUser): InstanceResult {
         val existing = find(id, user) ?: return InstanceResult.NotFound
-        if (!canManage(user)) return InstanceResult.Forbidden
+        if (!canManage(user, existing.group)) return InstanceResult.Forbidden
         val built = build(draft, existing, user)
         if (built is InstanceResult.Saved) {
             store.save(built.instance)
@@ -89,7 +101,7 @@ class InstanceService(
     /** Refused while any notification still sends through it. */
     fun delete(id: UUID, user: NotifyUser): InstanceResult {
         val existing = find(id, user) ?: return InstanceResult.NotFound
-        if (!canManage(user)) return InstanceResult.Forbidden
+        if (!canManage(user, existing.group)) return InstanceResult.Forbidden
         val using = usage.notificationsUsing(id)
         if (using.isNotEmpty()) return InstanceResult.InUse(using)
         store.delete(id)
@@ -151,7 +163,8 @@ class InstanceService(
             if (group != existing.group) problem("group", "cannot change; create an instance in the other group instead")
             if (plugin != existing.plugin) problem("plugin", "cannot change")
         } else {
-            if (!groups.isNotificationGroup(group)) problem("group", if (group.isEmpty()) "must be chosen" else "is not a notification group")
+            // Only in a group the user may manage: their own, or any for an admin.
+            groups.problemWith(user, group)?.let { problem("group", it) }
             if (deliveries.plugin(plugin) == null) problem("plugin", "is not an installed plugin")
         }
         val name = draft.name.trim()

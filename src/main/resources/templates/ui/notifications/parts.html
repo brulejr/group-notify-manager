@@ -52,7 +52,7 @@
     <th:block th:if="${#strings.isEmpty(menuGroup)}">Choose a group first.</th:block>
     <th:block th:unless="${#strings.isEmpty(menuGroup)}">This group has no delivery instances yet.
       <a th:if="${canProvision}" th:href="@{/ui/instances/new(group=${menuGroup})}" hx-boost="false" target="_blank" rel="noopener">Set one up</a>
-      <th:block th:unless="${canProvision}">An admin sets them up.</th:block></th:block>
+      <th:block th:unless="${canProvision}">A member who manages this group sets them up.</th:block></th:block>
   </span>
 </th:block>
 

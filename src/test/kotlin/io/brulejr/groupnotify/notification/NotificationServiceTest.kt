@@ -14,7 +14,6 @@ import io.brulejr.groupnotify.support.Fixtures
 import io.brulejr.groupnotify.support.TestUsers.admin
 import io.brulejr.groupnotify.support.TestUsers.alice
 import io.brulejr.groupnotify.support.TestUsers.bob
-import io.brulejr.groupnotify.support.TestUsers.reader
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -132,15 +131,6 @@ class NotificationServiceTest {
         assertEquals("Say what time, e.g. “at 6pm”.", problems(service.create(draft.copy(pattern = "every week on tuesday"), alice))["pattern"])
         assertEquals("Its end date has passed.", problems(service.create(draft.copy(pattern = "every day at 9am starting 2026-01-01 until 2026-02-01"), alice))["pattern"])
         assertTrue(problems(service.create(draft, alice)).containsKey("pattern"))
-    }
-
-    @Test
-    fun `a reader may see but not change`() {
-        val n = created()
-
-        assertEquals(n, service.find(n.id, reader))
-        assertIs<NotificationResult.Forbidden>(service.update(n.id, f.draft(), reader))
-        assertIs<NotificationResult.Forbidden>(service.delete(n.id, reader))
     }
 
     @Test

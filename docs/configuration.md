@@ -9,7 +9,7 @@ upper case (`notify.dispatch.misfire-grace` → `NOTIFY_DISPATCH_MISFIRE_GRACE`)
 
 `scripts/bootstrap.sh` writes the PostgreSQL passwords and `NOTIFY_SECRET_KEY`, which
 encrypts delivery instances' secrets, to `.env` (gitignored). Plugin credentials are
-not configuration: an admin enters them on each delivery instance in the console.
+not configuration: they are entered on each delivery instance in the console.
 
 `application-local.yml` (copy `application-local.example.yml`; gitignored, and left out
 of the boot jar) imports `.env` and sets the development user.
@@ -21,7 +21,6 @@ of the boot jar) imports `.env` and sets the development user.
 | `server.port` | `SERVER_PORT` | 5002 | |
 | `notify.security.mode` | `AUTH_MODE` | `forward-auth` | or `oidc`; see [security.md](security.md) |
 | `notify.security.admin-group` | `ADMIN_GROUP` | `homelab_admins` | |
-| `notify.security.editor-group` | | unset | When set, only its members manage notifications |
 | `notify.security.logout-url` | `LOGOUT_URL` | | |
 | `notify.security.forward-auth.trusted-proxies` | `TRUSTED_PROXIES` | any | Comma-separated addresses or CIDRs |
 | `notify.security.dev-user.*` | | unset | Development only |

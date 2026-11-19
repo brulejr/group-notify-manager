@@ -6,7 +6,7 @@
   <div class="page-header">
     <div>
       <h1>Delivery plugins</h1>
-      <p class="lead-text">The ways a notification can be sent. An admin sets a plugin up for a group as a named
+      <p class="lead-text">The ways a notification can be sent. A group's members set a plugin up for their group as a named
         <strong>instance</strong>, with its credentials and where it sends; the group's notifications choose among its
         instances, and may change only the settings the plugin marks as defaults.</p>
     </div>
@@ -42,8 +42,8 @@
               <span class="text-body-secondary" th:if="${!#strings.isEmpty(f.help)}" th:text="'— ' + ${f.help}">help</span>
             </li>
           </ul>
+          <a class="btn btn-sm btn-outline-primary" th:if="${canProvision}" th:href="@{/ui/instances/new(plugin=${p.id})}"><i class="bi bi-plus-lg me-1"></i>New instance</a>
           <th:block th:if="${isAdmin}">
-            <a class="btn btn-sm btn-outline-primary" th:href="@{/ui/instances/new(plugin=${p.id})}"><i class="bi bi-plus-lg me-1"></i>New instance</a>
             <div class="fw-semibold small mb-1 mt-3">Installation</div>
             <dl class="props small mb-0">
               <dt>From</dt><dd class="mono" th:text="${p.source}">jar</dd>

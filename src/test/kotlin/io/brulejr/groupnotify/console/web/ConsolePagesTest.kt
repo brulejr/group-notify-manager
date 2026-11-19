@@ -50,7 +50,7 @@ class ConsolePagesTest : WebTest() {
     @Autowired
     lateinit var audit: AuditPort
 
-    private val alice = NotifyUser("alice", "Alice", null, setOf("notify_club"), admin = false, editor = true)
+    private val alice = NotifyUser("alice", "Alice", null, setOf("notify_club"), admin = false)
 
     // Provisioned on first use in each test; the stores are emptied between tests.
     private var discord: PluginInstance? = null
@@ -127,13 +127,16 @@ class ConsolePagesTest : WebTest() {
     }
 
     @Test
-    fun `an admin provisions instances, a member only chooses among them`() {
+    fun `a group's members provision its instances, nobody another group's`() {
         val pages = mapOf(
             "/ui/instances/new" to "New delivery instance",
             "/ui/instances/new?plugin=groupsio&group=notify_club" to "config.apiKey",
         )
         pages.forEach { (path, text) -> mvc.perform(get(path).root()).andExpect(status().isOk).andExpect(content().string(containsString(text))) }
-        mvc.perform(get("/ui/instances/new?plugin=log").alice()).andExpect(status().isForbidden)
+        // Alice may set up instances for her own group only.
+        mvc.perform(get("/ui/instances/new?plugin=log").alice()).andExpect(status().isOk)
+            .andExpect(content().string(containsString("<option value=\"notify_club\">Radio Club</option>")))
+            .andExpect(content().string(not(containsString("value=\"notify_family\""))))
 
         mvc.perform(
             post("/ui/instances").root().with(csrf())
@@ -141,9 +144,20 @@ class ConsolePagesTest : WebTest() {
         ).andExpect(header().string("HX-Redirect", startsWith("/ui/plugins?saved=")))
         val created = instanceStore.list(null).single()
         assertEquals(mapOf("body" to "text"), created.config)
+        assertEquals("root", created.createdBy)
 
         mvc.perform(post("/ui/instances").alice().with(csrf()).param("group", "notify_club").param("plugin", "log").param("name", "Mine"))
-            .andExpect(status().isForbidden)
+            .andExpect(header().string("HX-Redirect", startsWith("/ui/plugins?saved=")))
+        val mine = instanceStore.list(null).single { it.name == "Mine" }
+        mvc.perform(get("/ui/instances/${mine.id}/edit").alice()).andExpect(status().isOk)
+        mvc.perform(get("/ui/instances/list").alice()).andExpect(content().string(containsString("/ui/instances/${mine.id}/edit")))
+
+        // Bob, in the family group only, can neither see the club's nor create one in it.
+        mvc.perform(get("/ui/instances/${mine.id}/edit").bob()).andExpect(status().isNotFound)
+        mvc.perform(post("/ui/instances").bob().with(csrf()).param("group", "notify_club").param("plugin", "log").param("name", "Theirs"))
+            .andExpect(header().doesNotExist("HX-Redirect"))
+            .andExpect(content().string(containsString("you are not a member of it")))
+        mvc.perform(delete("/ui/instances/${mine.id}").bob().with(csrf())).andExpect(content().string(containsString("No such delivery instance")))
         mvc.perform(get("/ui/instances/${created.id}/edit").root()).andExpect(status().isOk).andExpect(content().string(containsString("Save changes")))
 
         // The group is a choice when creating, fixed when editing, and still sent with the form.

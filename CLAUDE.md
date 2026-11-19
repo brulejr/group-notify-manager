@@ -59,7 +59,9 @@ docker compose up -d     # dev services via COMPOSE_FILE in .env: PostgreSQL :54
 - The `*/postgres/*Test` classes run against Testcontainers and are skipped without Docker.
 - The boot jar's Main-Class is `PropertiesLauncher`, so `loader.path` / `LOADER_PATH`
   adds plugin jars. Don't switch it back to `JarLauncher`.
-- Credentials live on delivery instances, which only admins manage; a notification's
+- A group's members manage its notifications and delivery instances, admins every
+  group's (`GroupService.canEdit`); there is no other role. Credentials live on delivery
+  instances; a notification's
   delivery names an instance of its own group and may override only fields marked
   `PluginField.overridable` (never a secret). Secret fields are sealed by `SecretCipher`
   (AES-256-GCM, `NOTIFY_SECRET_KEY`) before they are stored, never leave the server

@@ -14,6 +14,7 @@ import io.brulejr.groupnotify.instance.PluginInstance
  * An instance as the Delivery plugins page lists it.
  *
  * @property usedBy the titles of the notifications that send through it.
+ * @property canManage the viewer may edit and delete it.
  */
 data class InstanceRow(
     val instance: PluginInstance,
@@ -24,4 +25,5 @@ data class InstanceRow(
     val reason: String,
     val summary: String,
     val usedBy: MutableList<String>,
+    val canManage: Boolean,
 )

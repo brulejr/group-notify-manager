@@ -12,7 +12,7 @@ without internet.
 | A notification | The message as it will be sent, its schedule and next runs, its deliveries (each with a Test button), its history |
 | History | Every change and delivery in your groups; filter by group and kind, load older |
 | Groups | Your groups, with counts; start a notification in one |
-| Delivery plugins | Your groups' delivery instances, and each plugin, whether it is ready and what an instance is set up with. Admins create, edit and delete instances here, and see where each plugin came from |
+| Delivery plugins | Your groups' delivery instances, and each plugin, whether it is ready and what an instance is set up with. Those who manage a group create, edit and delete its instances here; admins also see where each plugin came from |
 
 ## Writing a notification
 
@@ -38,7 +38,7 @@ without internet.
   more. Each shows the settings this notification may change, with the instance's
   defaults filled in, and *Set for this notification* against any you changed. The
   switch disables a delivery without removing it. Credentials are not here: they are on
-  the instance. A group with no instances says so; an admin sets them up.
+  the instance. A group with no instances says so, with a link to set one up.
 - New notifications can **start paused**.
 
 A refused form is redrawn with each problem against its input.
@@ -51,8 +51,9 @@ with a hand icon and your name.
 
 ## Setting up a delivery instance
 
-Admins only, from **Delivery plugins**: **New instance** on a plugin or a group, then
-the group (fixed once created), a name its authors will recognise, and the plugin's
+For anyone who manages a group's notifications (and admins, for any group), from
+**Delivery plugins**: **New instance** on a plugin or a group, then the group (one you
+manage; fixed once created), a name its authors will recognise, and the plugin's
 fields: credentials (encrypted, and shown afterwards only as *Saved — leave blank to
 keep it*), where it sends, and the defaults its notifications start with, marked *A
 default: a notification may change it*. An instance a notification still uses cannot

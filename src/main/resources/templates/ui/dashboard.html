@@ -8,7 +8,7 @@
       <h1 th:text="'Hello, ' + ${me.displayName}">Hello</h1>
       <p class="lead-text">What your groups have coming up, what went out lately, and whether every way of sending is ready.</p>
     </div>
-    <div class="actions" th:if="${me.editor}">
+    <div class="actions" th:if="${canCreate}">
       <a th:href="@{/ui/notifications/new}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New notification</a>
     </div>
   </div>

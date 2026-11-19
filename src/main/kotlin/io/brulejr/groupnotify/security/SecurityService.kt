@@ -23,7 +23,6 @@ class SecurityService(private val datafill: SecurityDatafill) {
             email = email?.takeIf { it.isNotBlank() },
             groups = groupSet,
             admin = admin,
-            editor = admin || datafill.editorGroup == null || datafill.editorGroup in groupSet,
         )
     }
 

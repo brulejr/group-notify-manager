@@ -380,7 +380,7 @@ class NotificationPageController(
         val plugins = deliveries.plugins().associateBy { it.id }
         model.addAttribute("menuGroup", group)
         model.addAttribute("instances", choices.map { InstanceChoice(it.id, it.name, plugins[it.plugin]?.name ?: it.plugin, plugins[it.plugin]?.icon ?: "send", instances.summary(it)) }.toMutableList())
-        model.addAttribute("canProvision", instances.canManage(user))
+        model.addAttribute("canProvision", group.isNotBlank() && instances.canManage(user, group))
     }
 
     /**

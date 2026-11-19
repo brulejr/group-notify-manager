@@ -32,6 +32,10 @@ class ConsoleModel(
     @ModelAttribute("me")
     fun me(): NotifyUser? = currentUser()
 
+    /** Whether the user may write a notification: a member of a notification group, or an admin. */
+    @ModelAttribute("canCreate")
+    fun canCreate(): Boolean = currentUser()?.let { it.admin || groups.memberGroups(it).isNotEmpty() } ?: false
+
     /**
      * Read here, before the page renders, so the CSRF cookie is written while the
      * response can still take headers.

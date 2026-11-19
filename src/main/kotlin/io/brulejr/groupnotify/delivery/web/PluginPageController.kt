@@ -10,6 +10,7 @@ package io.brulejr.groupnotify.delivery.web
 
 import io.brulejr.groupnotify.console.web.Toast
 import io.brulejr.groupnotify.delivery.DeliveryService
+import io.brulejr.groupnotify.group.GroupService
 import io.brulejr.groupnotify.security.NotifyUser
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
@@ -22,12 +23,14 @@ import org.springframework.web.bind.annotation.RequestParam
  * `/ui/instances/list`.
  */
 @Controller
-class PluginPageController(private val deliveries: DeliveryService) {
+class PluginPageController(private val deliveries: DeliveryService, private val groups: GroupService) {
 
     @GetMapping("/ui/plugins")
     fun plugins(user: NotifyUser, @RequestParam(required = false) saved: String?, model: Model): String {
         model.addAttribute("plugins", deliveries.plugins().toMutableList())
         model.addAttribute("isAdmin", user.admin)
+        // Any member of a notification group may set up its instances.
+        model.addAttribute("canProvision", user.admin || groups.memberGroups(user).isNotEmpty())
         if (saved != null) model.addAttribute("toast", Toast.success("Delivery instance saved"))
         return "ui/plugins/list"
     }

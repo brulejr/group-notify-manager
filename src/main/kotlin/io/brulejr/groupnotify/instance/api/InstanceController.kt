@@ -27,9 +27,9 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
 /**
- * Plugin instances. Members of a group may list and read its instances, secrets masked,
- * to choose among them; only admins create, change or delete them. One outside the
- * caller's groups is not found.
+ * Plugin instances. A group's members create, read, change and delete its instances; an
+ * admin, any group's. Secrets are always masked. One outside the caller's groups is not
+ * found, and creating one in such a group is refused with 400.
  */
 @RestController
 @RequestMapping("/api/instances")

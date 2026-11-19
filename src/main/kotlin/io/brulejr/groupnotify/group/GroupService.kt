@@ -13,9 +13,9 @@ import io.brulejr.groupnotify.security.NotifyUser
 /**
  * Who may see and manage which group's notifications.
  *
- * A notification belongs to exactly one group. Its members see it; an admin sees every
- * group's. Managing it, creating, editing, pausing, sending, also needs the user to be
- * an editor (see `notify.security.editor-group`).
+ * A notification, like a delivery instance, belongs to exactly one group. That group's
+ * members see and manage it: create, edit, pause, send, delete. An admin sees and
+ * manages every group's. Nobody else sees it at all.
  */
 class GroupService(private val datafill: GroupDatafill) {
 
@@ -29,7 +29,7 @@ class GroupService(private val datafill: GroupDatafill) {
 
     fun canView(user: NotifyUser, group: String) = user.admin || user.memberOf(group)
 
-    fun canEdit(user: NotifyUser, group: String) = user.editor && canView(user, group)
+    fun canEdit(user: NotifyUser, group: String) = canView(user, group)
 
     /**
      * The groups whose notifications [user] may see, or null for every group: what the
@@ -43,7 +43,7 @@ class GroupService(private val datafill: GroupDatafill) {
 
     /** Groups [user] may create a notification in. An admin may also name any other. */
     fun editable(user: NotifyUser, inUse: Collection<String>): List<String> =
-        if (!user.editor) emptyList() else viewable(user, inUse).filter(::isNotificationGroup)
+        viewable(user, inUse).filter(::isNotificationGroup)
 
     fun displayName(group: String): String = datafill.names[group] ?: group
 
@@ -54,7 +54,6 @@ class GroupService(private val datafill: GroupDatafill) {
     fun problemWith(user: NotifyUser, group: String): String? = when {
         group.isBlank() -> "must be chosen"
         !isNotificationGroup(group) -> "is not a notification group"
-        !user.editor -> "you may not manage notifications"
         !user.admin && !user.memberOf(group) -> "you are not a member of it"
         else -> null
     }

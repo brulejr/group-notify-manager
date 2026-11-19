@@ -19,7 +19,6 @@ class SecurityInfoContributor(private val datafill: SecurityDatafill) : InfoCont
             mapOf(
                 "mode" to datafill.mode,
                 "adminGroup" to datafill.adminGroup,
-                "editorGroup" to (datafill.editorGroup ?: "any member"),
                 "trustedProxies" to datafill.forwardAuth.trustedProxies,
             ),
         )

@@ -96,11 +96,12 @@ class NotificationApiTest : WebTest() {
     }
 
     @Test
-    fun `only an admin provisions an instance, its secrets are never returned, and the mask keeps them`() {
-        mvc.perform(post("/api/instances").alice().contentType(MediaType.APPLICATION_JSON).content(instanceBody()))
-            .andExpect(status().isForbidden)
+    fun `a member provisions their group's instance, its secrets are never returned, and the mask keeps them`() {
+        mvc.perform(post("/api/instances").bob().contentType(MediaType.APPLICATION_JSON).content(instanceBody()))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.problems[0].field").value("group"))
         val created = json.readValue(
-            mvc.perform(post("/api/instances").root().contentType(MediaType.APPLICATION_JSON).content(instanceBody()))
+            mvc.perform(post("/api/instances").alice().contentType(MediaType.APPLICATION_JSON).content(instanceBody()))
                 .andExpect(status().isCreated)
                 .andExpect(jsonPath("$.config.webhookUrl").value("********"))
                 .andExpect(jsonPath("$.overridable", hasSize<Any>(2)))
@@ -113,7 +114,7 @@ class NotificationApiTest : WebTest() {
 
         mvc.perform(get("/api/instances?group=notify_club").alice()).andExpect(jsonPath("$[0].config.webhookUrl").value("********"))
         mvc.perform(get("/api/instances/$id").bob()).andExpect(status().isNotFound)
-        mvc.perform(put("/api/instances/$id").root().contentType(MediaType.APPLICATION_JSON).content(instanceBody(name = "Renamed", webhook = "********")))
+        mvc.perform(put("/api/instances/$id").alice().contentType(MediaType.APPLICATION_JSON).content(instanceBody(name = "Renamed", webhook = "********")))
             .andExpect(status().isOk)
         val stored = instanceStore.list(null).single()
         kotlin.test.assertEquals("Renamed", stored.name)
@@ -128,7 +129,8 @@ class NotificationApiTest : WebTest() {
         mvc.perform(delete("/api/instances/${discord.id}").root().header("X-Requested-With", "test"))
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.notifications[0]").value("Field day"))
-        mvc.perform(delete("/api/instances/${discord.id}").alice().header("X-Requested-With", "test")).andExpect(status().isForbidden)
+        mvc.perform(delete("/api/instances/${discord.id}").alice().header("X-Requested-With", "test")).andExpect(status().isConflict)
+        mvc.perform(delete("/api/instances/${discord.id}").bob().header("X-Requested-With", "test")).andExpect(status().isNotFound)
     }
 
     @Test

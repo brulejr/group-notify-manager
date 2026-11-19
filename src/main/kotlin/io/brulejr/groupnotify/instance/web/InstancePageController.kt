@@ -35,8 +35,8 @@ import java.util.UUID
 
 /**
  * The console's delivery instances: the list on the Delivery plugins page, and the form
- * an admin provisions one with. Members see their groups' instances, never a secret;
- * everything else is the admin's, and the service enforces it whatever this sends.
+ * one is provisioned with. Whoever may manage a group's notifications may manage its
+ * instances; nobody sees a secret. The service enforces it whatever this sends.
  */
 @Controller
 @RequestMapping("/ui/instances")
@@ -61,17 +61,19 @@ class InstancePageController(
                 reason = plugin?.reason ?: "${instance.plugin} is not installed",
                 summary = instances.summary(instance),
                 usedBy = instances.usedBy(instance).toMutableList(),
+                canManage = instances.canManage(user, instance.group),
             )
         }
         model.addAttribute("byGroup", LinkedHashMap(rows.groupBy { it.instance.group }.mapValues { it.value.toMutableList() }))
-        model.addAttribute("canManage", instances.canManage(user))
+        model.addAttribute("manageable", HashSet(instances.manageableGroups(user, groups.displayNames().keys)))
+        model.addAttribute("canManage", instances.canManageAny(user))
         model.addAttribute("ephemeralKey", instances.ephemeralKey)
         return "ui/instances/parts :: list"
     }
 
     @GetMapping("/new")
     fun create(user: NotifyUser, @RequestParam(required = false) plugin: String?, @RequestParam(required = false) group: String?, model: Model): String {
-        requireAdmin(user)
+        if (!instances.canManageAny(user)) throw ResponseStatusException(HttpStatus.FORBIDDEN, "You may not set up delivery instances")
         val descriptor = plugin?.let(deliveries::plugin)
         val form = InstanceForm(group = group.orEmpty(), plugin = descriptor?.id.orEmpty(), config = descriptor?.let { deliveries.defaults(it.id) }.orEmpty())
         formModel(user, null, form, emptyList(), model)
@@ -80,8 +82,8 @@ class InstancePageController(
 
     @GetMapping("/{id}/edit")
     fun edit(user: NotifyUser, @PathVariable id: UUID, model: Model): String {
-        requireAdmin(user)
         val instance = find(id, user)
+        if (!instances.canManage(user, instance.group)) throw ResponseStatusException(HttpStatus.FORBIDDEN, "You may not change this delivery instance")
         formModel(user, instance, InstanceForm.of(instance, instances.masked(instance)), emptyList(), model)
         return "ui/instances/form"
     }
@@ -103,7 +105,7 @@ class InstancePageController(
                     result.notifications.joinToString(", ") + ". Remove it from them first.",
             )
             InstanceResult.NotFound -> Toast.danger("No such delivery instance")
-            InstanceResult.Forbidden -> Toast.danger("Only an admin may delete a delivery instance")
+            InstanceResult.Forbidden -> Toast.danger("You may not delete this delivery instance")
             is InstanceResult.Invalid -> Toast.danger(result.problems.joinToString("; ") { it.reason })
         }
         model.addAttribute("toast", toast)
@@ -127,7 +129,7 @@ class InstancePageController(
                 "ui/instances/form :: form"
             }
             InstanceResult.NotFound -> throw ResponseStatusException(HttpStatus.NOT_FOUND)
-            InstanceResult.Forbidden -> throw ResponseStatusException(HttpStatus.FORBIDDEN, "Only an admin may provision delivery instances")
+            InstanceResult.Forbidden -> throw ResponseStatusException(HttpStatus.FORBIDDEN, "You may not set up delivery instances")
             is InstanceResult.InUse -> throw ResponseStatusException(HttpStatus.CONFLICT)
         }
     }
@@ -141,8 +143,9 @@ class InstancePageController(
         model.addAttribute("plugin", plugin)
         model.addAttribute("plugins", deliveries.plugins().toMutableList())
         model.addAttribute("inputs", plugin?.let { inputs(it, form, existing, errors) }.orEmpty().toMutableList())
-        // The form's own group stays choosable, e.g. an instance's, or one asked for in the link.
-        model.addAttribute("knownGroups", (knownGroups(user) + listOf(form.group).filter { it.isNotBlank() }).distinct().sorted().toMutableList())
+        // An instance's own group stays shown when editing; a new one offers only groups the user may manage.
+        val choices = instances.manageableGroups(user, groups.displayNames().keys) + listOfNotNull(existing?.group)
+        model.addAttribute("knownGroups", choices.distinct().sorted().toMutableList())
     }
 
     private fun inputs(plugin: PluginDescriptor, form: InstanceForm, existing: PluginInstance?, errors: Map<String, String>) = plugin.fields.map { field ->
@@ -156,14 +159,6 @@ class InstancePageController(
             error = errors["config.${field.key}"],
             note = if (field.overridable) "A default: a notification may change it" else null,
         )
-    }
-
-    /** Groups to suggest: the admin's own, those named in configuration, and those that already have instances. */
-    private fun knownGroups(user: NotifyUser): List<String> =
-        (groups.memberGroups(user) + groups.displayNames().keys + instances.groupsInUse()).filter(groups::isNotificationGroup).distinct().sorted()
-
-    private fun requireAdmin(user: NotifyUser) {
-        if (!instances.canManage(user)) throw ResponseStatusException(HttpStatus.FORBIDDEN, "Only an admin may provision delivery instances")
     }
 
     private fun find(id: UUID, user: NotifyUser): PluginInstance =

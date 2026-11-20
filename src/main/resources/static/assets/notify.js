@@ -285,6 +285,14 @@
     return next;
   };
 
+  /** The next free row number of the list with id [listId], counted on its data-next. */
+  window.notifyNextIn = function (listId) {
+    var list = document.getElementById(listId);
+    var next = parseInt(list.dataset.next || '0', 10);
+    list.dataset.next = String(next + 1);
+    return next;
+  };
+
   document.addEventListener('click', function (event) {
     var button = event.target.closest('[data-remove-delivery]');
     if (button) button.closest('.delivery-card').remove();

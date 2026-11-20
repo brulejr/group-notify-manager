@@ -22,10 +22,10 @@ http:
         "schedule": {"kind": "PATTERN", "pattern": "every other month on the 3rd tuesday at 7pm", "zone": "America/New_York"},
         "properties": [{"name": "location", "value": "Town hall"}],
         "reminders": [
-          {"amount": 7, "unit": "DAYS", "timing": "BEFORE"},
-          {"amount": 1, "unit": "HOURS", "timing": "BEFORE", "subject": "Starting {{event.when}}"}
-        ],
-        "deliveries": [{"instance": "{{instance_id}}"}]
+          {"amount": 7, "unit": "DAYS", "timing": "BEFORE", "deliveries": [{"instance": "{{instance_id}}"}]},
+          {"amount": 1, "unit": "HOURS", "timing": "BEFORE", "subject": "Starting {{event.when}}",
+           "deliveries": [{"instance": "{{instance_id}}"}]}
+        ]
       }
   auth: inherit
 

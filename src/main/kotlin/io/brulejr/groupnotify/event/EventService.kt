@@ -129,9 +129,11 @@ class EventService(
 
     /**
      * What the plugins are handed for [event]'s occurrence starting at [occurrence], as
-     * [reminder] sends it at [at]; without a reminder, as sent by hand now.
+     * [reminder] sends it at [at]; without a reminder, in the event's own words. Sent
+     * [byHand], `{{event.when}}` is how far off the occurrence is from [at], not from the
+     * reminder's place.
      */
-    fun message(event: Event, occurrence: Instant, reminder: Reminder?, groupName: String, at: Instant): NotificationMessage {
+    fun message(event: Event, occurrence: Instant, reminder: Reminder?, groupName: String, at: Instant, byHand: Boolean = false): NotificationMessage {
         val ownWords = reminder != null && reminder.body.isNotBlank()
         val subject = reminder?.subject?.takeIf { it.isNotBlank() } ?: event.subject
         val body = if (ownWords) reminder!!.body else event.body
@@ -139,7 +141,7 @@ class EventService(
         val note = event.notes[occurrence]
         // In the subject, the note's words alone; in the body, the note in the body's format,
         // where the body places it, or after the body when it does not.
-        val values = placeholders(event, occurrence, reminder, at) +
+        val values = placeholders(event, occurrence, reminder.takeUnless { byHand }, at) +
             ("occurrence.note" to note?.let { content.text(it.text, it.format).replace(Regex("\\s+"), " ").trim() }.orEmpty())
         val composed = note?.let { compose(body, format, it) } ?: Placeholders.put(body, "occurrence.note", "")
         return content.render(
@@ -210,8 +212,7 @@ class EventService(
         val sentRunAt = existing?.takeIf { it.status == NotificationStatus.COMPLETED }?.schedule?.runAt
         val schedule = ScheduleRules.build(draft.schedule, defaultZone, now, sentRunAt, ::problem)
         val properties = properties(draft.properties, ::problem)
-        val reminders = reminders(draft.reminders, existing, ::problem)
-        val deliveries = deliveryRules.build(draft.deliveries, group, existing?.deliveries.orEmpty(), datafill.maxDeliveries, ::problem)
+        val reminders = reminders(draft.reminders, group, existing, ::problem)
 
         if (problems.isNotEmpty() || schedule == null) return EventResult.Invalid(problems.toList())
 
@@ -234,7 +235,6 @@ class EventService(
                 schedule = schedule,
                 properties = properties,
                 reminders = reminders,
-                deliveries = deliveries,
                 // A note belongs to an occurrence: those the new schedule no longer has are dropped.
                 notes = existing?.notes.orEmpty().filterKeys { schedule.nextAfter(it.minusNanos(1)) == it },
                 status = status,
@@ -265,7 +265,8 @@ class EventService(
         }
     }
 
-    private fun reminders(drafts: List<EventDraft.Reminder>, existing: Event?, problem: (String, String) -> Boolean): List<Reminder> {
+    /** Each reminder, with its own deliveries checked against [group]'s instances as a notification's are. */
+    private fun reminders(drafts: List<EventDraft.Reminder>, group: String, existing: Event?, problem: (String, String) -> Boolean): List<Reminder> {
         if (drafts.isEmpty()) problem("reminders", "add at least one reminder")
         if (drafts.size > datafill.maxReminders) problem("reminders", "at most ${datafill.maxReminders} reminders")
         val previous = existing?.reminders.orEmpty().associateBy { it.id.toString() }
@@ -282,14 +283,17 @@ class EventService(
             }
             if (draft.subject.length > 300) problem("$prefix.subject", "must be at most 300 characters")
             if (draft.body.length > datafill.maxBodyLength) problem("$prefix.body", "must be at most ${datafill.maxBodyLength} characters")
+            val before = draft.id?.let { previous[it] }
+            val deliveries = deliveryRules.build(draft.deliveries, group, before?.deliveries.orEmpty(), datafill.maxDeliveries, problem, "$prefix.deliveries")
             Reminder(
-                id = draft.id?.let { previous[it] }?.id ?: UUID.randomUUID(),
+                id = before?.id ?: UUID.randomUUID(),
                 amount = amount ?: return@mapIndexedNotNull null,
                 unit = draft.unit,
                 timing = draft.timing,
                 subject = draft.subject.trim(),
                 body = draft.body.trim(),
                 enabled = draft.enabled,
+                deliveries = deliveries,
             )
         }
     }
@@ -337,8 +341,11 @@ class EventService(
         if (before.body != after.body || before.format != after.format) add("body")
         if (before.schedule != after.schedule) add("schedule")
         if (before.properties != after.properties) add("properties")
-        if (before.reminders.map { it.copy(id = NO_ID) } != after.reminders.map { it.copy(id = NO_ID) }) add("reminders")
-        if (before.deliveries.map { it.copy(id = NO_ID) } != after.deliveries.map { it.copy(id = NO_ID) }) add("deliveries")
+        // By content: a reminder or delivery re-entered as it was is no change, whatever its id.
+        fun Reminder.content() = copy(id = NO_ID, deliveries = emptyList())
+        fun Reminder.routes() = deliveries.map { it.copy(id = NO_ID) }
+        if (before.reminders.map { it.content() } != after.reminders.map { it.content() }) add("reminders")
+        if (before.reminders.map { it.routes() } != after.reminders.map { it.routes() }) add("deliveries")
     }.takeIf { it.isNotEmpty() }?.joinToString(", ", prefix = "changed ")
 
     /** How far [occurrence] is from [at], in words, for a message sent by hand. */

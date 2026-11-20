@@ -24,29 +24,30 @@ class DeliveryRules(private val instances: InstanceService) {
         existing: List<NotificationDelivery>,
         maxDeliveries: Int,
         problem: (String, String) -> Boolean,
+        prefix: String = "deliveries",
     ): List<NotificationDelivery> {
-        if (drafts.isEmpty()) problem("deliveries", "add at least one delivery")
-        if (drafts.size > maxDeliveries) problem("deliveries", "at most $maxDeliveries deliveries")
+        if (drafts.isEmpty()) problem(prefix, "add at least one delivery")
+        if (drafts.size > maxDeliveries) problem(prefix, "at most $maxDeliveries deliveries")
         val previous = existing.associateBy { it.id.toString() }
         val chosen = mutableSetOf<UUID>()
         return drafts.mapIndexedNotNull { index, draft ->
-            val prefix = "deliveries[$index]"
+            val at = "$prefix[$index]"
             val instance = runCatching { UUID.fromString(draft.instance.trim()) }.getOrNull()?.let(instances::get)
             when {
                 instance == null -> {
-                    problem("$prefix.instance", "is not a delivery instance")
+                    problem("$at.instance", "is not a delivery instance")
                     return@mapIndexedNotNull null
                 }
                 // An instance of another group would send where this group may not.
                 instance.group != group -> {
-                    problem("$prefix.instance", "${instance.name} belongs to another group")
+                    problem("$at.instance", "${instance.name} belongs to another group")
                     return@mapIndexedNotNull null
                 }
-                !chosen.add(instance.id) -> problem("$prefix.instance", "${instance.name} is chosen more than once")
+                !chosen.add(instance.id) -> problem("$at.instance", "${instance.name} is chosen more than once")
             }
             val overrides = instances.overrides(checkNotNull(instance), draft.overrides)
             instances.checkOverrides(instance, overrides).forEach {
-                problem(if (it.field in setOf("plugin", "instance")) "$prefix.instance" else "$prefix.overrides.${it.field}", it.reason)
+                problem(if (it.field in setOf("plugin", "instance")) "$at.instance" else "$at.overrides.${it.field}", it.reason)
             }
             val id = draft.id?.let { previous[it] }?.id ?: UUID.randomUUID()
             NotificationDelivery(id, instance.id, overrides, draft.enabled)

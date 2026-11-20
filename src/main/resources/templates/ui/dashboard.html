@@ -38,28 +38,51 @@
       <div class="col-xl-7">
         <div class="card h-100">
           <div class="card-header"><i class="bi bi-calendar-event"></i>Coming up
-            <a th:href="@{/ui/notifications}" class="ms-auto small fw-normal">All notifications</a></div>
+            <span class="ms-auto small fw-normal"><a th:href="@{/ui/notifications}">Notifications</a> · <a th:href="@{/ui/events}">Events</a></span></div>
+          <!--/* What is about to be sent: notifications' next runs and events' next reminders, together. */-->
           <div class="list-group list-group-flush">
-            <a class="list-group-item list-group-item-action upcoming-item" th:each="n : ${o.upcoming}"
-               th:href="@{/ui/notifications/{id}(id=${n.id})}">
+            <a class="list-group-item list-group-item-action upcoming-item" th:each="u : ${o.upcoming}" th:href="@{${u.href}}">
               <div class="upcoming-when">
-                <div class="fw-semibold" th:text="${#temporals.format(n.nextRunAt.atZone(n.schedule.zone), 'EEE d MMM')}">Tue 17 Nov</div>
-                <div class="small text-body-secondary" th:text="${#temporals.format(n.nextRunAt.atZone(n.schedule.zone), 'h:mm a z')}">6:00 PM</div>
+                <div class="fw-semibold" th:text="${#temporals.format(u.at.atZone(u.zone), 'EEE d MMM')}">Tue 17 Nov</div>
+                <div class="small text-body-secondary" th:text="${#temporals.format(u.at.atZone(u.zone), 'h:mm a z')}">6:00 PM</div>
               </div>
               <div class="flex-grow-1 min-w-0">
-                <div class="fw-semibold text-truncate" th:text="${n.title}">Title</div>
-                <div class="small text-body-secondary text-truncate" th:text="${n.subject}">Subject</div>
+                <div class="fw-semibold text-truncate"><i class="bi bi-calendar-event me-1 text-body-secondary" th:if="${u.event}" title="Event reminder"></i><span
+                    th:text="${u.title}">Title</span></div>
+                <div class="small text-body-secondary text-truncate" th:text="${u.subject}">Subject</div>
               </div>
-              <span th:replace="~{ui/layout :: group(${n.group}, ${groupNames.get(n.group) ?: n.group})}"></span>
-              <span class="badge text-bg-light border" th:text="${n.schedule.kind.label}">Recurring</span>
+              <span th:replace="~{ui/layout :: group(${u.group}, ${groupNames.get(u.group) ?: u.group})}"></span>
+              <span class="badge border" th:classappend="${u.event} ? 'text-bg-info' : 'text-bg-light'" th:text="${u.label}">Recurring</span>
             </a>
             <th:block th:if="${o.upcoming.isEmpty()}">
-              <div th:replace="~{ui/layout :: empty('bi-calendar', 'Nothing scheduled', 'Notifications that are active and due appear here.')}"></div>
+              <div th:replace="~{ui/layout :: empty('bi-calendar', 'Nothing scheduled', 'Active notifications and event reminders that are due appear here.')}"></div>
             </th:block>
           </div>
         </div>
       </div>
       <div class="col-xl-5">
+        <!--/* Each event's next occurrence. */-->
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-calendar3"></i>Next events
+            <a th:href="@{/ui/events}" class="ms-auto small fw-normal">All events</a></div>
+          <div class="list-group list-group-flush">
+            <a class="list-group-item list-group-item-action upcoming-item" th:each="ev : ${o.events}" th:href="@{${ev.href}}">
+              <div class="upcoming-when">
+                <div class="fw-semibold" th:text="${#temporals.format(ev.at.atZone(ev.zone), 'EEE d MMM')}">Tue 17 Nov</div>
+                <div class="small text-body-secondary" th:text="${#temporals.format(ev.at.atZone(ev.zone), 'h:mm a z')}">7:00 PM</div>
+              </div>
+              <div class="flex-grow-1 min-w-0">
+                <div class="fw-semibold text-truncate" th:text="${ev.title}">Club meeting</div>
+                <div class="small text-body-secondary text-truncate" th:if="${ev.nextReminder != null}">
+                  Next reminder: <span th:text="${ev.nextReminder}">1 hour before</span>, <time data-format="relative" th:datetime="${ev.nextReminderAt}"></time></div>
+              </div>
+              <span th:replace="~{ui/layout :: group(${ev.group}, ${groupNames.get(ev.group) ?: ev.group})}"></span>
+            </a>
+            <th:block th:if="${o.events.isEmpty()}">
+              <div th:replace="~{ui/layout :: empty('bi-calendar3', 'No events', 'Meetings, nets and other events of your groups appear here.')}"></div>
+            </th:block>
+          </div>
+        </div>
         <div class="card mb-4">
           <div class="card-header"><i class="bi bi-plug"></i>Delivery plugins
             <a th:href="@{/ui/plugins}" class="ms-auto small fw-normal">Details</a></div>

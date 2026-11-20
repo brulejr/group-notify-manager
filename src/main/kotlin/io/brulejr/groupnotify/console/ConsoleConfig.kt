@@ -10,6 +10,7 @@ package io.brulejr.groupnotify.console
 
 import io.brulejr.groupnotify.audit.AuditService
 import io.brulejr.groupnotify.delivery.DeliveryService
+import io.brulejr.groupnotify.event.EventService
 import io.brulejr.groupnotify.group.GroupService
 import io.brulejr.groupnotify.notification.NotificationService
 import org.springframework.context.annotation.Bean
@@ -26,11 +27,12 @@ class ConsoleConfig {
     @Bean
     fun consoleService(
         notifications: NotificationService,
+        events: EventService,
         audit: AuditService,
         deliveries: DeliveryService,
         groups: GroupService,
         clock: Clock,
-    ) = ConsoleService(notifications, audit, deliveries, groups, clock)
+    ) = ConsoleService(notifications, events, audit, deliveries, groups, clock)
 
     @Bean
     fun consoleHealthIndicator() = ConsoleHealthIndicator()

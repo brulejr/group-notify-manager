@@ -4,19 +4,19 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 <!--/* One delivery: the instance it goes through, and its overridable fields. */-->
-<div th:fragment="delivery" class="card delivery-card" th:with="i=${row.index}, p=${row.plugin}">
-  <input type="hidden" th:name="'deliveries[' + ${i} + '].instance'" th:value="${row.instance}">
-  <input type="hidden" th:name="'deliveries[' + ${i} + '].id'" th:value="${row.id}">
+<div th:fragment="delivery" class="card delivery-card" th:with="at=${row.prefix}, p=${row.plugin}">
+  <input type="hidden" th:name="${at} + '.instance'" th:value="${row.instance}">
+  <input type="hidden" th:name="${at} + '.id'" th:value="${row.id}">
   <div class="card-header delivery-header">
     <i class="bi plugin-icon" th:classappend="'bi-' + ${p != null ? p.icon : 'question-circle'}"></i>
     <span class="fw-semibold" th:text="${row.name}">Club announcements</span>
     <span class="small text-body-secondary text-truncate" th:text="${(p != null ? p.name + ' · ' : '') + row.summary}">groups.io · brulenet</span>
     <span class="badge text-bg-warning" th:if="${p != null and !p.ready}" th:title="${p.reason}"><i class="bi bi-exclamation-triangle me-1"></i>not ready</span>
     <div class="form-check form-switch mb-0 ms-auto" title="A disabled delivery is kept but not sent">
-      <input type="hidden" th:name="'deliveries[' + ${i} + '].enabled'" value="false">
-      <input class="form-check-input" type="checkbox" role="switch" th:id="'d' + ${i} + '-enabled'" th:name="'deliveries[' + ${i} + '].enabled'"
+      <input type="hidden" th:name="${at} + '.enabled'" value="false">
+      <input class="form-check-input" type="checkbox" role="switch" th:id="${row.htmlId} + '-enabled'" th:name="${at} + '.enabled'"
              value="true" th:checked="${row.enabled}">
-      <label class="form-check-label small" th:for="'d' + ${i} + '-enabled'">On</label>
+      <label class="form-check-label small" th:for="${row.htmlId} + '-enabled'">On</label>
     </div>
     <button type="button" class="btn btn-sm btn-outline-danger" data-remove-delivery title="Remove this delivery" aria-label="Remove"><i class="bi bi-x-lg"></i></button>
   </div>
@@ -32,7 +32,8 @@
   </div>
 </div>
 
-<!--/* The Add delivery menu: the instances of the form's group. */-->
+<!--/* The Add delivery menu: the instances of the form's group. A row it adds goes into the list
+       with id ${menuList}, named under ${menuPrefix}: a notification's, or one of an event's reminders. */-->
 <th:block th:fragment="instanceMenu">
   <div class="dropdown" th:unless="${instances.isEmpty()}">
     <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -40,8 +41,8 @@
     <ul class="dropdown-menu dropdown-menu-end">
       <li th:each="c : ${instances}">
         <button type="button" class="dropdown-item d-flex align-items-center gap-2" th:hx-get="@{/ui/notifications/delivery}"
-                th:attr="hx-vals='js:{instance: &quot;' + ${c.id} + '&quot;, index: notifyNextIndex()}'"
-                hx-target="#delivery-list" hx-swap="beforeend">
+                th:attr="hx-vals='js:{instance: &quot;' + ${c.id} + '&quot;, index: notifyNextIn(&quot;' + ${menuList} + '&quot;), prefix: &quot;' + ${menuPrefix} + '&quot;}',hx-target='#' + ${menuList}"
+                hx-swap="beforeend">
           <i class="bi" th:classappend="'bi-' + ${c.icon}"></i>
           <span><span class="fw-medium" th:text="${c.name}">Club announcements</span>
             <span class="d-block small text-body-secondary" th:text="${c.pluginName} + ' · ' + ${c.summary}">groups.io · brulenet</span></span></button>

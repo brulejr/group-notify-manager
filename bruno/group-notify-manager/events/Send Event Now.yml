@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: "{{notify_url}}/api/events/{{event_id}}/send"
+  url: "{{notify_url}}/api/events/{{event_id}}/send?reminderId={{reminder_id}}"
   headers:
     - name: Remote-User
       value: "{{remote_user}}"

@@ -72,7 +72,10 @@ docker compose up -d     # dev services via COMPOSE_FILE in .env: PostgreSQL :54
   instance through the `InstanceUsage` beans `NotificationConfig` and `EventConfig` provide.
 - Events reuse the notification's schedule and delivery checks (`ScheduleRules`,
   `DeliveryRules`) and its form parts (`ui/notifications/form :: bodyEditor`,
-  `scheduleCard`, `deliveriesCard`); change them there, for both.
+  `scheduleCard`, and the `ui/notifications/parts :: delivery` and `instanceMenu`
+  fragments); change them there, for both. Deliveries belong to each event reminder, so
+  a delivery row and its menu take a prefix (`deliveries` or `reminders[n].deliveries`,
+  `DeliveryRows.PREFIX`) and a list id (`delivery-list` or `r<n>-deliveries`).
 - Templates: give a template Java collections (`toMutableList()`), never Kotlin's empty
   singletons. Never put `th:if`/`th:each` on the element carrying `th:replace`. A
   container that sets `hx-target` also sets `hx-disinherit="*"`. Fragments fetched on

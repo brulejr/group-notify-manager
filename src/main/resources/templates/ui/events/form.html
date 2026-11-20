@@ -16,10 +16,11 @@
   </div>
 
   <!--/* The whole form is redrawn when it is refused, with each problem against its input. It shares the
-         notification form's body editor, schedule and deliveries, and its class, which drives them. */-->
+         notification form's body editor and schedule, and its class, which drives them; each reminder
+         has its own deliveries, drawn as a notification's are. */-->
   <form th:fragment="form" id="event-form" class="notification-form event-form" novalidate hx-target="this" hx-swap="outerHTML" hx-disinherit="*"
         th:hx-post="${existing == null} ? @{/ui/events} : @{/ui/events/{id}(id=${existing.id})}"
-        th:attr="data-next-index=${rows.size()},data-next-reminder=${reminderRows.size()},data-next-property=${propertyRows.size()}">
+        th:attr="data-next-reminder=${reminderRows.size()},data-next-property=${propertyRows.size()}">
     <div th:replace="~{ui/layout :: toast(${toast})}"></div>
     <div class="row g-4">
       <div class="col-xl-8">
@@ -79,7 +80,7 @@
         <!--/* ---- reminders ---- */-->
         <div class="card mb-4">
           <div class="card-header"><i class="bi bi-alarm"></i>Reminders
-            <button type="button" class="btn btn-sm btn-outline-primary ms-auto" th:hx-get="@{/ui/events/reminder}"
+            <button type="button" class="btn btn-sm btn-outline-primary ms-auto" th:hx-get="@{/ui/events/reminder}" hx-include="#group"
                     hx-vals="js:{index: notifyNextIndex('nextReminder')}" hx-target="#reminder-list" hx-swap="beforeend">
               <i class="bi bi-plus-lg me-1"></i>Add reminder</button>
           </div>
@@ -88,13 +89,11 @@
             <div id="reminder-list" class="row-list">
               <th:block th:each="r : ${reminderRows}"><div th:replace="~{ui/events/parts :: reminder}"></div></th:block>
             </div>
-            <p class="small text-body-secondary mb-0">Sent for each occurrence. Days and weeks keep the local time: "1 day before" a 7 PM meeting is
-              7 PM the day before.</p>
+            <p class="small text-body-secondary mb-0">Sent for each occurrence, each through its own deliveries: the week-before one to the list, say,
+              and the hour-before one to Discord. Days and weeks keep the local time: "1 day before" a 7 PM meeting is 7 PM the day before.</p>
           </div>
         </div>
 
-        <!--/* ---- deliveries ---- */-->
-        <div th:replace="~{ui/notifications/form :: deliveriesCard}"></div>
       </div>
 
       <!--/* ---- side ---- */-->

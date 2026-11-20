@@ -11,7 +11,12 @@ package io.brulejr.groupnotify.event.web
 import io.brulejr.groupnotify.event.ReminderTiming
 import io.brulejr.groupnotify.event.ReminderUnit
 
-/** One reminder's inputs in the form, with any problem against each. */
+/**
+ * One reminder's inputs in the form, with any problem against each, and its own
+ * deliveries' rows.
+ *
+ * @property deliveriesError a problem with its deliveries as a whole, e.g. that it has none.
+ */
 data class ReminderRow(
     val index: Int,
     val id: String,
@@ -24,4 +29,6 @@ data class ReminderRow(
     val amountError: String?,
     val subjectError: String?,
     val bodyError: String?,
+    val deliveries: MutableList<io.brulejr.groupnotify.notification.web.DeliveryRow> = mutableListOf(),
+    val deliveriesError: String? = null,
 )

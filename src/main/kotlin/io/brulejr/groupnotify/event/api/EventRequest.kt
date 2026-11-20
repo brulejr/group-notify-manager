@@ -19,8 +19,9 @@ import io.brulejr.groupnotify.notification.api.NotificationRequest
 /**
  * An event as the REST API takes it. The schedule is a notification's; properties are
  * `{"name": "location", "value": "Town hall"}`; reminders are
- * `{"amount": 1, "unit": "DAYS", "timing": "BEFORE"}`, with an optional own `subject`
- * and Markdown `body`; deliveries are a notification's.
+ * `{"amount": 1, "unit": "DAYS", "timing": "BEFORE", "deliveries": [...]}`, with an
+ * optional own `subject` and Markdown `body`, and each its own deliveries, as a
+ * notification's are.
  */
 data class EventRequest(
     val group: String = "",
@@ -31,7 +32,6 @@ data class EventRequest(
     val schedule: NotificationRequest.ScheduleRequest = NotificationRequest.ScheduleRequest(),
     val properties: List<EventProperty> = emptyList(),
     val reminders: List<ReminderRequest> = emptyList(),
-    val deliveries: List<NotificationRequest.DeliveryRequest> = emptyList(),
     val paused: Boolean = false,
 ) {
     /** @property id the stored reminder this replaces, so it keeps its id. */
@@ -43,6 +43,7 @@ data class EventRequest(
         val subject: String = "",
         val body: String = "",
         val enabled: Boolean = true,
+        val deliveries: List<NotificationRequest.DeliveryRequest> = emptyList(),
     )
 
     fun toDraft() = EventDraft(
@@ -53,8 +54,12 @@ data class EventRequest(
         format = format,
         schedule = schedule.toInput(),
         properties = properties,
-        reminders = reminders.map { EventDraft.Reminder(it.id, it.amount.toString(), it.unit, it.timing, it.subject, it.body, it.enabled) },
-        deliveries = deliveries.map { NotificationDraft.Delivery(it.id, it.instance, it.overrides, it.enabled) },
+        reminders = reminders.map { r ->
+            EventDraft.Reminder(
+                r.id, r.amount.toString(), r.unit, r.timing, r.subject, r.body, r.enabled,
+                r.deliveries.map { NotificationDraft.Delivery(it.id, it.instance, it.overrides, it.enabled) },
+            )
+        },
         paused = paused,
     )
 }

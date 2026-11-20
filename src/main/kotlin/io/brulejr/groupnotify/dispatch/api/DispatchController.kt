@@ -32,10 +32,17 @@ class DispatchController(private val dispatch: DispatchService) {
     fun send(user: NotifyUser, @PathVariable id: UUID, @RequestParam(required = false) deliveryId: UUID?): ResponseEntity<Any> =
         respond(dispatch.sendNow(id, user, deliveryId))
 
-    /** Sends an event's message now, for its next occurrence, or through one delivery only; its reminders are left alone. */
+    /**
+     * Sends one of an event's reminders now, for its next occurrence, through its
+     * deliveries or only one of them; its schedule is left alone.
+     */
     @PostMapping("/api/events/{id}/send")
-    fun sendEvent(user: NotifyUser, @PathVariable id: UUID, @RequestParam(required = false) deliveryId: UUID?): ResponseEntity<Any> =
-        respond(dispatch.sendEventNow(id, user, deliveryId))
+    fun sendEvent(
+        user: NotifyUser,
+        @PathVariable id: UUID,
+        @RequestParam reminderId: UUID,
+        @RequestParam(required = false) deliveryId: UUID?,
+    ): ResponseEntity<Any> = respond(dispatch.sendEventNow(id, user, reminderId, deliveryId))
 
     private fun respond(result: SendResult): ResponseEntity<Any> =
         when (result) {

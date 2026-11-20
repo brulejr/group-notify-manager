@@ -22,6 +22,7 @@ import io.brulejr.groupnotify.support.TestUsers.alice
 import io.brulejr.groupnotify.support.TestUsers.bob
 import java.time.Duration
 import java.time.Instant
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -68,14 +69,14 @@ class EventServiceTest {
     @Test
     fun `properties, reminders and deliveries are checked against their inputs`() {
         val family = f.instance(group = "notify_family", name = "Family channel")
+        val club = listOf(f.delivery())
         val draft = f.eventDraft(
             reminders = listOf(
-                EventDraft.Reminder(amount = "x"),
+                EventDraft.Reminder(amount = "x", deliveries = listOf(f.delivery(family))),
                 EventDraft.Reminder(amount = "2", unit = ReminderUnit.HOURS),
-                EventDraft.Reminder(amount = "2", unit = ReminderUnit.HOURS),
-                EventDraft.Reminder(amount = "500", unit = ReminderUnit.DAYS),
+                EventDraft.Reminder(amount = "2", unit = ReminderUnit.HOURS, deliveries = club),
+                EventDraft.Reminder(amount = "500", unit = ReminderUnit.DAYS, deliveries = club),
             ),
-            deliveries = listOf(f.delivery(family)),
         ).copy(
             properties = listOf(EventProperty("Location", "a"), EventProperty("location", "b"), EventProperty("2nd", "c"), EventProperty("when", "d")),
         )
@@ -86,9 +87,10 @@ class EventServiceTest {
                 "properties[2].name" to "must be letters, digits and _, starting with a letter, e.g. location",
                 "properties[3].name" to "is one of the event's own placeholders: choose another name",
                 "reminders[0].amount" to "must be a whole number",
+                "reminders[0].deliveries[0].instance" to "Family channel belongs to another group",
+                "reminders[1].deliveries" to "add at least one delivery",
                 "reminders[2].amount" to "is the same as another reminder's",
                 "reminders[3].amount" to "must be 1 to 90 days",
-                "deliveries[0].instance" to "Family channel belongs to another group",
             ),
             problems(service.create(draft, alice)),
         )
@@ -211,17 +213,47 @@ class EventServiceTest {
     }
 
     @Test
-    fun `send now sends the event's own message for its next occurrence, by hand`() {
+    fun `each reminder goes through its own deliveries`() {
+        val loud = f.instance(name = "Loud channel", config = mapOf("channel" to "loud"))
+        val e = created(
+            f.eventDraft(
+                reminders = listOf(
+                    EventDraft.Reminder(amount = "1", unit = ReminderUnit.DAYS, deliveries = listOf(f.delivery())),
+                    EventDraft.Reminder(amount = "1", unit = ReminderUnit.HOURS, deliveries = listOf(f.delivery(loud), f.delivery())),
+                ),
+            ),
+        )
+        assertEquals(listOf(listOf(f.club.id), listOf(loud.id, f.club.id)), e.reminders.map { r -> r.deliveries.map { it.instance } })
+
+        // The hour-before reminder, due tonight at 18:00: through both its channels.
+        f.clock.now = Instant.parse("2026-11-10T23:00:30Z")
+        f.dispatch.runDue()
+        assertEquals(listOf("loud", "general"), plugin.sent.map { it.second["channel"] })
+
+        // Next week's day-before reminder: through the club's channel only.
+        plugin.sent.clear()
+        f.clock.now = Instant.parse("2026-11-17T00:00:30Z")
+        f.dispatch.runDue()
+        assertEquals(listOf("general"), plugin.sent.map { it.second["channel"] })
+        assertEquals(listOf("event: Club meeting"), f.instances.usedBy(loud))
+    }
+
+    @Test
+    fun `send now sends one reminder for the next occurrence, by hand, through its deliveries or one`() {
         val e = created()
 
-        val sent = assertIs<SendResult.Sent>(f.dispatch.sendEventNow(e.id, alice))
+        val sent = assertIs<SendResult.Sent>(f.dispatch.sendEventNow(e.id, alice, e.reminders[0].id))
 
         assertEquals(1, sent.reports.size)
         assertEquals("Meeting Tuesday at Town hall", plugin.sent.single().first.subject)
         // From 07:00 to the 19:00 meeting.
         assertEquals("See you in 12 hours at **Town hall**.", plugin.sent.single().first.markdown)
         assertEquals(DispatchTrigger.MANUAL, f.audit.history(alice, AuditQuery(eventId = e.id)).first().trigger)
-        assertIs<SendResult.NotFound>(f.dispatch.sendEventNow(e.id, bob))
+        assertIs<SendResult.NotFound>(f.dispatch.sendEventNow(e.id, bob, e.reminders[0].id))
+        assertIs<SendResult.NotFound>(f.dispatch.sendEventNow(e.id, alice, UUID.randomUUID()))
+        // Its own subject, with event.when from now rather than from its place.
+        assertIs<SendResult.Sent>(f.dispatch.sendEventNow(e.id, alice, e.reminders[1].id, e.reminders[1].deliveries.single().id))
+        assertEquals("Starting in 12 hours", plugin.sent.last().first.subject)
         // Its planned reminders are left alone.
         assertEquals(e.next, service.get(e.id)?.next)
     }

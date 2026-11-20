@@ -49,7 +49,7 @@ class EventConfig {
     /** Which events send through an instance, so an instance in use is not deleted. */
     @Bean
     fun eventInstanceUsage(store: EventPort) = InstanceUsage { id ->
-        store.list(null).filter { e -> e.deliveries.any { it.instance == id } }.map { "event: ${it.title}" }
+        store.list(null).filter { e -> e.allDeliveries.any { it.instance == id } }.map { "event: ${it.title}" }
     }
 
     /** New events take the notifications' default time zone. */

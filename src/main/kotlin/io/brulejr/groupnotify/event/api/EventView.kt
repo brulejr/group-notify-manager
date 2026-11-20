@@ -31,7 +31,6 @@ data class EventView(
     val schedule: NotificationView.ScheduleView,
     val properties: List<EventProperty>,
     val reminders: List<ReminderView>,
-    val deliveries: List<NotificationView.DeliveryView>,
     val notes: Map<Instant, OccurrenceNote>,
     val status: NotificationStatus,
     val next: NextView?,
@@ -51,6 +50,7 @@ data class EventView(
         val subject: String,
         val body: String,
         val enabled: Boolean,
+        val deliveries: List<NotificationView.DeliveryView>,
     )
 
     /** The reminder due next: when, for which occurrence, which reminder. */
@@ -66,8 +66,9 @@ data class EventView(
             format = e.format,
             schedule = NotificationView.schedule(e.schedule),
             properties = e.properties,
-            reminders = e.reminders.map { ReminderView(it.id, it.amount, it.unit, it.timing, it.describe(), it.subject, it.body, it.enabled) },
-            deliveries = NotificationView.deliveries(e.deliveries, instances),
+            reminders = e.reminders.map {
+                ReminderView(it.id, it.amount, it.unit, it.timing, it.describe(), it.subject, it.body, it.enabled, NotificationView.deliveries(it.deliveries, instances))
+            },
             notes = e.notes,
             status = e.status,
             next = e.next?.let { NextView(it.sendAt, it.occurrence, it.reminder, e.reminder(it.reminder)?.describe()) },

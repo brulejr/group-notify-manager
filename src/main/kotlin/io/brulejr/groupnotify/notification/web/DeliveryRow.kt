@@ -18,6 +18,8 @@ import io.brulejr.groupnotify.delivery.web.FieldInput
  * @property instance the instance's id as text, as the form sends it back.
  * @property name the instance's name, or why it cannot be shown.
  * @property summary where the instance sends.
+ * @property prefix what its inputs are named under, e.g. `deliveries[2]`.
+ * @property htmlId the same, fit for an element id, e.g. `deliveries-2`.
  */
 data class DeliveryRow(
     val index: Int,
@@ -29,4 +31,6 @@ data class DeliveryRow(
     val enabled: Boolean,
     val inputs: MutableList<FieldInput>,
     val error: String?,
+    val prefix: String = "deliveries[$index]",
+    val htmlId: String = "deliveries-$index",
 )

@@ -79,7 +79,8 @@ class EventPageController(
                 event = e,
                 groupName = groups.displayName(e.group),
                 canEdit = events.canEdit(user, e),
-                deliveries = rowsHelper.badges(e.deliveries).toMutableList(),
+                // Where any of its reminders goes, each instance once.
+                deliveries = rowsHelper.badges(e.allDeliveries.distinctBy { it.instance }).toMutableList(),
                 nextOccurrence = events.occurrences(e, 1).firstOrNull(),
                 nextReminder = e.next?.let { e.reminder(it.reminder)?.describe() },
             )
@@ -135,12 +136,13 @@ class EventPageController(
     fun update(user: NotifyUser, @PathVariable id: UUID, @RequestParam params: MultiValueMap<String, String>, model: Model, response: HttpServletResponse): String =
         submit(user, find(id, user), params, model, response)
 
-    /** A new reminder row numbered [index]. */
+    /** A new reminder row numbered [index], offering [group]'s instances for its deliveries. */
     @GetMapping("/reminder")
-    fun reminderRow(@RequestParam index: Int, model: Model): String {
+    fun reminderRow(user: NotifyUser, @RequestParam index: Int, @RequestParam(defaultValue = "") group: String, model: Model): String {
         model.addAttribute("r", reminderRow(index, EventForm.Reminder(), emptyMap()))
         model.addAttribute("units", ReminderUnit.entries.toMutableList())
         model.addAttribute("timings", ReminderTiming.entries.toMutableList())
+        rowsHelper.menu(user, group, model)
         return "ui/events/parts :: reminder"
     }
 
@@ -203,9 +205,17 @@ class EventPageController(
     fun resume(user: NotifyUser, @PathVariable id: UUID, model: Model, response: HttpServletResponse) =
         act(events.resume(id, user), "Resumed", model, response)
 
+    /** Sends one reminder now, for the next occurrence, through its deliveries or one of them. */
     @PostMapping("/{id}/send")
-    fun send(user: NotifyUser, @PathVariable id: UUID, @RequestParam(required = false) deliveryId: UUID?, model: Model, response: HttpServletResponse): String {
-        val toast = when (val result = dispatch.sendEventNow(id, user, deliveryId)) {
+    fun send(
+        user: NotifyUser,
+        @PathVariable id: UUID,
+        @RequestParam reminderId: UUID,
+        @RequestParam(required = false) deliveryId: UUID?,
+        model: Model,
+        response: HttpServletResponse,
+    ): String {
+        val toast = when (val result = dispatch.sendEventNow(id, user, reminderId, deliveryId)) {
             is SendResult.Sent -> when {
                 result.failed == 0 -> Toast.success(if (result.reports.size == 1) "Sent via ${result.reports.single().name}" else "Sent through ${result.reports.size} deliveries")
                 result.failed == result.reports.size -> Toast.danger("Not sent: " + result.reports.joinToString("; ") { "${it.name}: ${it.outcome.detail}" })
@@ -214,9 +224,9 @@ class EventPageController(
                         result.reports.filter { !it.outcome.delivered }.joinToString("; ") { "${it.name}: ${it.outcome.detail}" },
                 )
             }
-            SendResult.NotFound -> Toast.danger("No such event")
+            SendResult.NotFound -> Toast.danger("No such event or reminder")
             SendResult.Forbidden -> Toast.danger("You may not send this event")
-            SendResult.NothingToSend -> Toast.warning("It has no enabled delivery, or no occurrence to come")
+            SendResult.NothingToSend -> Toast.warning("This reminder has no enabled delivery, or the event no occurrence to come")
         }
         model.addAttribute("toast", toast)
         Htmx.trigger(response, Htmx.EVENTS_CHANGED)
@@ -293,7 +303,7 @@ class EventPageController(
         model.addAttribute("groupName", groups.displayName(e.group))
         model.addAttribute("canEdit", events.canEdit(user, e))
         model.addAttribute("message", next?.let { events.message(e, it, null, groups.displayName(e.group), clock.instant()) })
-        model.addAttribute("deliveries", rowsHelper.badges(e.deliveries).toMutableList())
+        model.addAttribute("reminders", e.reminders.map { ReminderDetail(it, rowsHelper.badges(it.deliveries).toMutableList()) }.toMutableList())
         model.addAttribute("occurrences", occurrences.toMutableList())
         model.addAttribute("nextReminder", e.next?.let { "${e.reminder(it.reminder)?.describe() ?: "reminder"} — ${WHEN.format(it.sendAt.atZone(zone))}" })
         model.addAttribute("patternMeaning", e.schedule.parsedPattern?.describe())
@@ -321,10 +331,9 @@ class EventPageController(
         // The parts shared with the notification form read "form".
         model.addAttribute("form", base)
         model.addAttribute("errors", HashMap(errors))
-        model.addAttribute("deliveryErrors", errors.filterKeys { it == "deliveries" }.values.toMutableList())
         model.addAttribute("reminderErrors", errors.filterKeys { it == "reminders" }.values.toMutableList())
         model.addAttribute("propertyErrors", errors.filterKeys { it == "properties" }.values.toMutableList())
-        model.addAttribute("rows", base.deliveries.mapIndexed { index, delivery -> rowsHelper.row(index, delivery, errors) }.toMutableList())
+        // Each reminder's own menu reads these instances; its list and prefix are set where it is drawn.
         rowsHelper.menu(user, base.group, model)
         model.addAttribute("propertyRows", form.properties.mapIndexed { i, p -> PropertyRow(i, p.name, p.value, errors["properties[$i].name"], errors["properties[$i].value"]) }.toMutableList())
         model.addAttribute("reminderRows", form.reminders.mapIndexed { i, r -> reminderRow(i, r, errors) }.toMutableList())
@@ -343,6 +352,8 @@ class EventPageController(
     private fun reminderRow(index: Int, r: EventForm.Reminder, errors: Map<String, String>) = ReminderRow(
         index, r.id, r.amount, r.unit, r.timing, r.subject, r.body, r.enabled,
         errors["reminders[$index].amount"], errors["reminders[$index].subject"], errors["reminders[$index].body"],
+        deliveries = r.deliveries.mapIndexed { i, d -> rowsHelper.row(i, d, errors, "reminders[$index].deliveries") }.toMutableList(),
+        deliveriesError = errors["reminders[$index].deliveries"],
     )
 
     private companion object {

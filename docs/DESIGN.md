@@ -174,7 +174,9 @@ and sends through that group's delivery instances, exactly as a notification doe
   placed where the body writes `{{occurrence.note}}`; in a subject that placeholder
   gives its plain text. Notes of occurrences the schedule no longer has, or long past,
   are dropped.
-- Its **deliveries** are chosen once, for every reminder.
+- Each **reminder chooses its own deliveries**, instances of the event's group with
+  overrides, as a notification's are, and needs at least one. (V4 had one set for the
+  whole event; V5 copied it onto each reminder.)
 
 `EventCalendar` orders every enabled reminder of every occurrence by send time, then
 occurrence, then the reminder's place, so two that fall at the same instant (a weekly
@@ -182,7 +184,13 @@ event's "1 week before" and "at the start") are both sent, in a fixed order. The
 one is stored with the event (`next_run_at`, `next_occurrence`, `next_reminder`).
 
 The schedule and delivery checks are shared with notifications (`ScheduleRules`,
-`DeliveryRules`), as are the form's body editor, schedule and deliveries.
+`DeliveryRules`, a reminder's reported under `reminders[n].deliveries`), as are the
+form's body editor, schedule and delivery rows: a row and its Add delivery menu are
+named under a prefix (`deliveries` or `reminders[n].deliveries`) and fill a list by id.
+
+The dashboard's **Coming up** merges notifications' next runs with events' next
+reminders, an event's subject filled as its reminder will send it, and **Next events**
+lists each event's next occurrence.
 
 ## Dispatch
 

@@ -19,7 +19,7 @@
   </div>
 </div>
 
-<!--/* One reminder: how long before or after each occurrence, and optionally its own words. */-->
+<!--/* One reminder: how long before or after each occurrence, optionally its own words, and where it goes. */-->
 <div th:fragment="reminder" class="card reminder-card mb-2" data-row th:with="i=${r.index}">
   <input type="hidden" th:name="'reminders[' + ${i} + '].id'" th:value="${r.id}">
   <div class="card-body py-2">
@@ -59,6 +59,21 @@
       <textarea class="form-control" rows="3" th:name="'reminders[' + ${i} + '].body'" th:text="${r.body}"
                 placeholder="Its own body, in Markdown (blank: the event's)" th:classappend="${r.bodyError != null} ? 'is-invalid'"></textarea>
       <div class="invalid-feedback" th:text="${r.bodyError}"></div>
+    </div>
+    <!--/* Its deliveries: the group's instances, as a notification's; the menu is fetched again when the group changes. */-->
+    <div class="reminder-deliveries mt-2" th:with="menuList='r' + ${i} + '-deliveries', menuPrefix='reminders[' + ${i} + '].deliveries'">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="small fw-semibold"><i class="bi bi-send me-1"></i>Sent through</span>
+        <div class="ms-auto" th:hx-get="@{/ui/notifications/instances(list=${menuList}, prefix=${menuPrefix})}" hx-trigger="change from:#group"
+             hx-include="#group" hx-target="this" hx-swap="innerHTML" hx-disinherit="*">
+          <div th:replace="~{ui/notifications/parts :: instanceMenu}"></div>
+        </div>
+      </div>
+      <div class="alert alert-danger py-2 small mb-2" th:if="${r.deliveriesError != null}"
+           th:text="${r.deliveriesError.substring(0, 1).toUpperCase() + r.deliveriesError.substring(1)}">add one</div>
+      <div class="delivery-list" th:id="${menuList}" th:attr="data-next=${r.deliveries.size()}">
+        <th:block th:each="row : ${r.deliveries}"><div th:replace="~{ui/notifications/parts :: delivery}"></div></th:block>
+      </div>
     </div>
   </div>
 </div>

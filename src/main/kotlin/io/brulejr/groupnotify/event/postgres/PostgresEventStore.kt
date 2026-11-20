@@ -34,8 +34,8 @@ import java.util.UUID
 
 /**
  * PostgreSQL-backed [EventPort]: the `events` table, its properties, reminders and notes
- * as `jsonb`, and its deliveries in `event_deliveries`, which refer to their instances
- * by foreign key so an instance in use cannot be deleted.
+ * as `jsonb`, and each reminder's deliveries in `event_deliveries`, which refer to their
+ * instances by foreign key so an instance in use cannot be deleted.
  */
 class PostgresEventStore(
     private val jdbc: JdbcClient,
@@ -97,20 +97,23 @@ class PostgresEventStore(
                 .param("updatedAt", event.updatedAt.toTimestamptz())
                 .update()
             jdbc.sql("DELETE FROM event_deliveries WHERE event_id = :id").param("id", event.id).update()
-            event.deliveries.forEachIndexed { position, delivery ->
-                jdbc.sql(
-                    """
-                    INSERT INTO event_deliveries (id, event_id, position, instance_id, enabled, overrides)
-                    VALUES (:id, :eventId, :position, :instance, :enabled, CAST(:overrides AS jsonb))
-                    """,
-                )
-                    .param("id", delivery.id)
-                    .param("eventId", event.id)
-                    .param("position", position)
-                    .param("instance", delivery.instance)
-                    .param("enabled", delivery.enabled)
-                    .param("overrides", json.writeValueAsString(delivery.overrides))
-                    .update()
+            event.reminders.forEach { reminder ->
+                reminder.deliveries.forEachIndexed { position, delivery ->
+                    jdbc.sql(
+                        """
+                        INSERT INTO event_deliveries (id, event_id, reminder_id, position, instance_id, enabled, overrides)
+                        VALUES (:id, :eventId, :reminderId, :position, :instance, :enabled, CAST(:overrides AS jsonb))
+                        """,
+                    )
+                        .param("id", delivery.id)
+                        .param("eventId", event.id)
+                        .param("reminderId", reminder.id)
+                        .param("position", position)
+                        .param("instance", delivery.instance)
+                        .param("enabled", delivery.enabled)
+                        .param("overrides", json.writeValueAsString(delivery.overrides))
+                        .update()
+                }
             }
         }
     }
@@ -150,7 +153,7 @@ class PostgresEventStore(
         val deliveries = jdbc.sql("SELECT * FROM event_deliveries WHERE event_id IN (:ids) ORDER BY position")
             .param("ids", rows.map { it.id })
             .query { rs, _ ->
-                rs.getObject("event_id", UUID::class.java) to NotificationDelivery(
+                rs.getObject("reminder_id", UUID::class.java) to NotificationDelivery(
                     id = rs.getObject("id", UUID::class.java),
                     instance = rs.getObject("instance_id", UUID::class.java),
                     overrides = json.readValue(rs.getString("overrides"), STRINGS),
@@ -159,7 +162,7 @@ class PostgresEventStore(
             }
             .list()
             .groupBy({ it.first }, { it.second })
-        return rows.map { it.copy(deliveries = deliveries[it.id].orEmpty()) }
+        return rows.map { e -> e.copy(reminders = e.reminders.map { r -> r.copy(deliveries = deliveries[r.id].orEmpty()) }) }
     }
 
     private fun ResultSet.toEvent(): Event {
@@ -181,7 +184,6 @@ class PostgresEventStore(
             ),
             properties = json.readValue(getString("properties"), MAPS).map { EventProperty(it.getValue("name").toString(), it["value"]?.toString().orEmpty()) },
             reminders = json.readValue(getString("reminders"), MAPS).map(::reminderOf),
-            deliveries = emptyList(),
             notes = json.readValue(getString("notes"), NOTES).entries.associate { (at, n) ->
                 Instant.parse(at) to OccurrenceNote(n["text"].orEmpty(), BodyFormat.valueOf(n["format"] ?: BodyFormat.MARKDOWN.name))
             },

@@ -137,14 +137,14 @@
         <div class="card mb-4" th:fragment="deliveriesCard">
           <div class="card-header"><i class="bi bi-send"></i>Deliveries
             <!--/* The group's instances; fetched again when the group changes. */-->
-            <div id="instance-menu" class="ms-auto" th:hx-get="@{/ui/notifications/instances}" hx-trigger="change from:#group"
+            <div id="instance-menu" class="ms-auto" th:hx-get="@{/ui/notifications/instances(list='delivery-list', prefix='deliveries')}" hx-trigger="change from:#group"
                  hx-include="#group" hx-target="this" hx-swap="innerHTML" hx-disinherit="*">
               <div th:replace="~{ui/notifications/parts :: instanceMenu}"></div>
             </div>
           </div>
           <div class="card-body">
             <div class="alert alert-danger py-2 small" th:each="e : ${deliveryErrors}" th:text="${e.substring(0, 1).toUpperCase() + e.substring(1)}">add one</div>
-            <div id="delivery-list" class="delivery-list">
+            <div id="delivery-list" class="delivery-list" th:attr="data-next=${rows.size()}">
               <th:block th:each="row : ${rows}"><div th:replace="~{ui/notifications/parts :: delivery}"></div></th:block>
             </div>
             <p class="text-body-secondary small mb-0 delivery-empty">A notification goes out through its group's delivery instances, a groups.io list and

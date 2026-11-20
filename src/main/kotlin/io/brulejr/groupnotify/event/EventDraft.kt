@@ -14,8 +14,7 @@ import io.brulejr.groupnotify.notification.ScheduleInput
 
 /**
  * An event as submitted, before it is checked: from the console's form or the REST API.
- *
- * @property deliveries as a notification's: one of the group's instances each, with overrides.
+ * Each reminder chooses its own deliveries.
  */
 data class EventDraft(
     val group: String,
@@ -26,7 +25,6 @@ data class EventDraft(
     val schedule: ScheduleInput,
     val properties: List<EventProperty> = emptyList(),
     val reminders: List<EventDraft.Reminder> = emptyList(),
-    val deliveries: List<NotificationDraft.Delivery> = emptyList(),
     val paused: Boolean = false,
 ) {
     /**
@@ -34,6 +32,7 @@ data class EventDraft(
      * against its input.
      *
      * @property id the stored reminder this replaces; null for a new one.
+     * @property deliveries as a notification's: one of the group's instances each, with overrides.
      */
     data class Reminder(
         val id: String? = null,
@@ -43,5 +42,6 @@ data class EventDraft(
         val subject: String = "",
         val body: String = "",
         val enabled: Boolean = true,
+        val deliveries: List<NotificationDraft.Delivery> = emptyList(),
     )
 }

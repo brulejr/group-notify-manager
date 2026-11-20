@@ -8,6 +8,7 @@
  */
 package io.brulejr.groupnotify.event
 
+import io.brulejr.groupnotify.notification.NotificationDelivery
 import java.time.Instant
 import java.time.ZoneId
 import java.util.UUID
@@ -24,6 +25,9 @@ import java.util.UUID
  * @property amount ignored [ReminderTiming.AT_START].
  * @property subject its own subject; blank for the event's.
  * @property body its own body, in Markdown; blank for the event's.
+ * @property deliveries where it goes: instances of the event's group, each with its
+ *   overrides, chosen for this reminder alone, e.g. the week-before one to the groups.io
+ *   list and the hour-before one to Discord.
  */
 data class Reminder(
     val id: UUID,
@@ -33,6 +37,7 @@ data class Reminder(
     val subject: String = "",
     val body: String = "",
     val enabled: Boolean = true,
+    val deliveries: List<NotificationDelivery> = emptyList(),
 ) {
     /** When it goes out for the occurrence starting at [occurrence]. */
     fun sendAt(occurrence: Instant, zone: ZoneId): Instant {

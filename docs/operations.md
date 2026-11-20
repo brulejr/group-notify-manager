@@ -29,7 +29,8 @@ Bruno collection in `bruno/group-notify-manager` covers every call.
 | `GET, PUT, DELETE /api/events/{id}` | |
 | `GET /api/events/{id}/upcoming?count=5` | Its next reminders: when, for which occurrence, which reminder |
 | `PUT /api/events/{id}/notes` | `{"occurrence": "<instant>", "note": "…", "format": "MARKDOWN"}` (or `HTML`); blank removes it |
-| `POST /api/events/{id}/pause`, `/resume`, `/send[?deliveryId=]` | |
+| `POST /api/events/{id}/pause`, `/resume` | |
+| `POST /api/events/{id}/send?reminderId=[&deliveryId=]` | Sends one reminder now, for the next occurrence, through its deliveries or one of them |
 | `GET /api/instances[?group=]`, `GET /api/instances/{id}` | Delivery instances you may see, secrets masked |
 | `POST /api/instances`, `PUT, DELETE /api/instances/{id}` | Provision, change, delete: those who manage the group, and admins; 409 when one in use is deleted |
 | `GET /api/groups` | Your groups with counts |

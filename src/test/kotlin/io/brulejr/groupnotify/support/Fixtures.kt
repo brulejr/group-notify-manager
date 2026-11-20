@@ -66,7 +66,7 @@ class Fixtures(
         instanceStore, deliveries, groups,
         listOf(
             InstanceUsage { id -> notificationStore.list(null).filter { n -> n.deliveries.any { it.instance == id } }.map { it.title } },
-            InstanceUsage { id -> eventStore.list(null).filter { e -> e.deliveries.any { it.instance == id } }.map { "event: ${it.title}" } },
+            InstanceUsage { id -> eventStore.list(null).filter { e -> e.allDeliveries.any { it.instance == id } }.map { "event: ${it.title}" } },
         ),
         audit, cipher, InstanceDatafill(store = StoreType.MEMORY), clock,
     )
@@ -79,16 +79,17 @@ class Fixtures(
 
     /**
      * A club meeting every Tuesday at 7 PM from 10 November 2026, a Tuesday, with a
-     * location, reminded a day before and an hour before, through the club's channel.
+     * location, reminded a day before and an hour before, each through [deliveries], by
+     * default the club's channel.
      */
     fun eventDraft(
         group: String = "notify_club",
         schedule: ScheduleInput = ScheduleInput(ScheduleKind.PATTERN, "America/New_York", pattern = "every tuesday at 7pm starting 2026-11-10"),
-        reminders: List<EventDraft.Reminder> = listOf(
-            EventDraft.Reminder(amount = "1", unit = ReminderUnit.DAYS, timing = ReminderTiming.BEFORE),
-            EventDraft.Reminder(amount = "1", unit = ReminderUnit.HOURS, timing = ReminderTiming.BEFORE, subject = "Starting {{event.when}}"),
-        ),
         deliveries: List<NotificationDraft.Delivery> = listOf(delivery()),
+        reminders: List<EventDraft.Reminder> = listOf(
+            EventDraft.Reminder(amount = "1", unit = ReminderUnit.DAYS, timing = ReminderTiming.BEFORE, deliveries = deliveries),
+            EventDraft.Reminder(amount = "1", unit = ReminderUnit.HOURS, timing = ReminderTiming.BEFORE, subject = "Starting {{event.when}}", deliveries = deliveries),
+        ),
     ) = EventDraft(
         group = group,
         title = "Club meeting",
@@ -98,7 +99,6 @@ class Fixtures(
         schedule = schedule,
         properties = listOf(EventProperty("location", "Town hall"), EventProperty("net_control", "W1AW")),
         reminders = reminders,
-        deliveries = deliveries,
     )
 
     /** An instance provisioned by an admin, of the recording plugin by default, to #general in the club. */

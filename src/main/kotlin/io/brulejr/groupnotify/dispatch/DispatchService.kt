@@ -108,17 +108,19 @@ class DispatchService(
     }
 
     /**
-     * Sends an event's message now, for its next occurrence, outside its reminders, which
-     * it leaves alone. With [deliveryId], only that delivery: a test of one channel.
+     * Sends one of an event's reminders now, for the event's next occurrence, through that
+     * reminder's deliveries, outside its schedule, which it leaves alone. With
+     * [deliveryId], only that delivery: a test of one channel.
      */
-    fun sendEventNow(id: UUID, user: NotifyUser, deliveryId: UUID? = null): SendResult {
+    fun sendEventNow(id: UUID, user: NotifyUser, reminderId: UUID, deliveryId: UUID? = null): SendResult {
         val event = events.find(id, user) ?: return SendResult.NotFound
         if (!events.canEdit(user, event)) return SendResult.Forbidden
-        val chosen = event.deliveries.filter { if (deliveryId != null) it.id == deliveryId else it.enabled }
-        val occurrence = event.schedule.nextAfter(clock.instant()) ?: event.schedule.runAt
-        if (chosen.isEmpty() || occurrence == null) return SendResult.NothingToSend
+        val reminder = event.reminder(reminderId) ?: return SendResult.NotFound
+        val chosen = reminder.deliveries.filter { if (deliveryId != null) it.id == deliveryId else it.enabled }
         val now = clock.instant()
-        val message = events.message(event, occurrence, null, groups.displayName(event.group), now)
+        val occurrence = event.schedule.nextAfter(now) ?: event.schedule.runAt
+        if (chosen.isEmpty() || occurrence == null) return SendResult.NothingToSend
+        val message = events.message(event, occurrence, reminder, groups.displayName(event.group), now, byHand = true)
         return SendResult.Sent(deliver(Subject.of(event), message, chosen, DispatchTrigger.MANUAL, user.actor))
     }
 
@@ -181,7 +183,7 @@ class DispatchService(
             }
             else -> {
                 val message = events.message(event, due.occurrence, reminder, groups.displayName(event.group), due.sendAt)
-                deliver(Subject.of(event), message, event.deliveries.filter { it.enabled }, DispatchTrigger.SCHEDULE, AuditEvent.SCHEDULER)
+                deliver(Subject.of(event), message, reminder.deliveries.filter { it.enabled }, DispatchTrigger.SCHEDULE, AuditEvent.SCHEDULER)
             }
         }
         if (next == null) record(Subject.of(event), AuditEventType.COMPLETED, AuditEvent.SCHEDULER, DispatchTrigger.SCHEDULE, "no reminders left")

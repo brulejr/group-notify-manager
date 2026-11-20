@@ -20,10 +20,6 @@
         </p>
       </div>
       <div class="actions" th:if="${canEdit}">
-        <button type="button" class="btn btn-outline-secondary" hx-swap="none" data-confirm-label="Send now"
-                th:hx-post="@{/ui/events/{id}/send(id=${e.id})}"
-                th:hx-confirm="'Send ' + ${e.title} + ' now, for its next occurrence, through every enabled delivery? Its reminders are not changed.'">
-          <i class="bi bi-send me-1"></i>Send now</button>
         <button type="button" class="btn btn-outline-warning" hx-swap="none" th:if="${e.status.name() == 'ACTIVE'}"
                 th:hx-post="@{/ui/events/{id}/pause(id=${e.id})}"><i class="bi bi-pause-fill me-1"></i>Pause</button>
         <button type="button" class="btn btn-outline-success" hx-swap="none" th:if="${e.status.name() == 'PAUSED'}"
@@ -108,31 +104,36 @@
             <span class="small text-body-secondary" th:if="${e.properties.isEmpty()}">None.</span>
           </div>
         </div>
-        <div class="card mb-4">
+        <div class="card">
           <div class="card-header"><i class="bi bi-alarm"></i>Reminders</div>
           <ul class="list-group list-group-flush">
-            <li class="list-group-item small" th:each="r : ${e.reminders}" th:classappend="${!r.enabled} ? 'opacity-50'">
-              <span class="fw-medium" th:text="${r.describe()}">1 day before</span>
-              <span class="badge text-bg-secondary ms-1" th:unless="${r.enabled}">off</span>
-              <span class="text-body-secondary d-block" th:if="${!#strings.isEmpty(r.subject)}" th:text="'“' + ${r.subject} + '”'">own subject</span>
-              <span class="text-body-secondary d-block" th:if="${#strings.isEmpty(r.subject) and #strings.isEmpty(r.body)}">the event's words</span>
-            </li>
-          </ul>
-        </div>
-        <div class="card">
-          <div class="card-header"><i class="bi bi-send"></i>Deliveries</div>
-          <ul class="list-group list-group-flush">
-            <li class="list-group-item delivery-item" th:each="d : ${deliveries}" th:classappend="${!d.enabled} ? 'opacity-50'">
-              <i class="bi plugin-icon" th:classappend="'bi-' + ${d.icon}"></i>
-              <div class="min-w-0 flex-grow-1">
-                <div class="fw-medium"><span th:text="${d.name}">Club announcements</span>
-                  <span class="badge text-bg-secondary ms-1" th:unless="${d.enabled}">disabled</span>
-                  <span class="badge text-bg-warning ms-1" th:unless="${d.ready}" th:title="${d.reason}">not ready</span></div>
-                <div class="small text-body-secondary text-truncate" th:text="${d.pluginName} + ' · ' + ${d.summary}">summary</div>
+            <li class="list-group-item" th:each="rd : ${reminders}" th:with="r=${rd.reminder}" th:classappend="${!r.enabled} ? 'opacity-50'">
+              <div class="d-flex align-items-start gap-2">
+                <div class="flex-grow-1 min-w-0">
+                  <span class="fw-medium" th:text="${r.describe()}">1 day before</span>
+                  <span class="badge text-bg-secondary ms-1" th:unless="${r.enabled}">off</span>
+                  <span class="small text-body-secondary d-block" th:if="${!#strings.isEmpty(r.subject)}" th:text="'“' + ${r.subject} + '”'">own subject</span>
+                  <span class="small text-body-secondary d-block" th:if="${#strings.isEmpty(r.subject) and #strings.isEmpty(r.body)}">the event's words</span>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" th:if="${canEdit}" hx-swap="none" data-confirm-label="Send now"
+                        th:hx-post="@{/ui/events/{id}/send(id=${e.id}, reminderId=${r.id})}"
+                        th:hx-confirm="'Send the ' + ${r.describe()} + ' reminder of ' + ${e.title} + ' now, for its next occurrence, through its deliveries? Its schedule is not changed.'">
+                  <i class="bi bi-send me-1"></i>Send now</button>
               </div>
-              <button type="button" class="btn btn-sm btn-outline-secondary" th:if="${canEdit}" hx-swap="none" data-confirm-label="Send test"
-                      th:hx-post="@{/ui/events/{id}/send(id=${e.id}, deliveryId=${d.id})}"
-                      th:hx-confirm="'Send ' + ${e.title} + ' now through ' + ${d.name} + ' only?'">Test</button>
+              <!--/* Where this reminder goes. */-->
+              <div class="delivery-item small mt-2" th:each="d : ${rd.deliveries}" th:classappend="${!d.enabled} ? 'opacity-50'">
+                <i class="bi plugin-icon" th:classappend="'bi-' + ${d.icon}"></i>
+                <div class="min-w-0 flex-grow-1">
+                  <span class="fw-medium" th:text="${d.name}">Club announcements</span>
+                  <span class="badge text-bg-secondary ms-1" th:unless="${d.enabled}">disabled</span>
+                  <span class="badge text-bg-warning ms-1" th:unless="${d.ready}" th:title="${d.reason}">not ready</span>
+                  <span class="text-body-secondary d-block text-truncate" th:text="${d.pluginName} + ' · ' + ${d.summary}">summary</span>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" th:if="${canEdit}" hx-swap="none" data-confirm-label="Send test"
+                        th:hx-post="@{/ui/events/{id}/send(id=${e.id}, reminderId=${r.id}, deliveryId=${d.id})}"
+                        th:hx-confirm="'Send the ' + ${r.describe()} + ' reminder now through ' + ${d.name} + ' only?'">Test</button>
+              </div>
+              <div class="small text-body-secondary mt-1" th:if="${rd.deliveries.isEmpty()}">No deliveries.</div>
             </li>
           </ul>
         </div>

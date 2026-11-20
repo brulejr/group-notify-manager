@@ -164,16 +164,30 @@ class NotificationPageController(
 
     /** A new delivery row through [instance], numbered [index]; the instance must be in a group [user] may see. */
     @GetMapping("/delivery")
-    fun deliveryRow(user: NotifyUser, @RequestParam instance: UUID, @RequestParam index: Int, model: Model): String {
+    fun deliveryRow(
+        user: NotifyUser,
+        @RequestParam instance: UUID,
+        @RequestParam index: Int,
+        @RequestParam(defaultValue = "deliveries") prefix: String,
+        model: Model,
+    ): String {
         val chosen = instances.find(instance, user) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "No such delivery instance")
-        model.addAttribute("row", rowsHelper.row(index, NotificationForm.Delivery(instance = chosen.id.toString()), emptyMap()))
+        if (!DeliveryRows.PREFIX.matches(prefix)) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "No such delivery list")
+        model.addAttribute("row", rowsHelper.row(index, NotificationForm.Delivery(instance = chosen.id.toString()), emptyMap(), prefix))
         return "ui/notifications/parts :: delivery"
     }
 
     /** The Add delivery menu: [group]'s instances. Fetched again whenever the form's group changes. */
     @GetMapping("/instances")
-    fun instanceMenu(user: NotifyUser, @RequestParam(defaultValue = "") group: String, model: Model): String {
-        rowsHelper.menu(user, group, model)
+    fun instanceMenu(
+        user: NotifyUser,
+        @RequestParam(defaultValue = "") group: String,
+        @RequestParam(defaultValue = "delivery-list") list: String,
+        @RequestParam(defaultValue = "deliveries") prefix: String,
+        model: Model,
+    ): String {
+        if (!DeliveryRows.LIST.matches(list) || !DeliveryRows.PREFIX.matches(prefix)) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "No such delivery list")
+        rowsHelper.menu(user, group, model, list, prefix)
         return "ui/notifications/parts :: instanceMenu"
     }
 

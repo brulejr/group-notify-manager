@@ -24,7 +24,8 @@ import java.util.UUID
  * reminder sends them unless it has its own words.
  *
  * Like a notification, it belongs to one group, whose members see and manage it, and
- * goes out through that group's delivery instances.
+ * goes out through that group's delivery instances, which each reminder chooses for
+ * itself.
  *
  * @property schedule when it happens: each run of it is an occurrence.
  * @property notes an occurrence's own note, keyed by its start, e.g. "This week: guest
@@ -43,7 +44,6 @@ data class Event(
     val schedule: Schedule,
     val properties: List<EventProperty>,
     val reminders: List<Reminder>,
-    val deliveries: List<NotificationDelivery>,
     val notes: Map<Instant, OccurrenceNote>,
     val status: NotificationStatus,
     val next: PendingReminder?,
@@ -56,4 +56,7 @@ data class Event(
     val nextRunAt: Instant? get() = next?.sendAt
 
     fun reminder(id: UUID): Reminder? = reminders.firstOrNull { it.id == id }
+
+    /** Every reminder's deliveries, for what the event uses. */
+    val allDeliveries: List<NotificationDelivery> get() = reminders.flatMap { it.deliveries }
 }

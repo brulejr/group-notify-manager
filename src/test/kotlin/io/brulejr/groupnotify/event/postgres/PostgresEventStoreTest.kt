@@ -47,15 +47,20 @@ class PostgresEventStoreTest {
     private lateinit var instance: PluginInstance
 
     private fun event(next: Instant? = now.minusSeconds(5)): Event {
-        val reminder = Reminder(UUID.randomUUID(), 1, ReminderUnit.HOURS, ReminderTiming.BEFORE, subject = "Soon", body = "**In an hour**")
+        val reminder = Reminder(
+            UUID.randomUUID(), 1, ReminderUnit.HOURS, ReminderTiming.BEFORE, subject = "Soon", body = "**In an hour**",
+            deliveries = listOf(NotificationDelivery(UUID.randomUUID(), instance.id, mapOf("body" to "text")), NotificationDelivery(UUID.randomUUID(), instance.id, enabled = false)),
+        )
         val occurrence = now.plusSeconds(3600).truncatedTo(ChronoUnit.SECONDS)
         return Event(
             id = UUID.randomUUID(), group = "notify_club", title = "Meeting", subject = "At {{event.location}}", body = "b",
             format = BodyFormat.MARKDOWN,
             schedule = Schedule(ScheduleKind.PATTERN, ZoneId.of("America/New_York"), pattern = "every 1 week on tuesday at 19:00 starting 2026-11-10"),
             properties = listOf(EventProperty("zebra", "z"), EventProperty("location", "Town hall")),
-            reminders = listOf(reminder, Reminder(UUID.randomUUID(), 0, ReminderUnit.MINUTES, ReminderTiming.AT_START, enabled = false)),
-            deliveries = listOf(NotificationDelivery(UUID.randomUUID(), instance.id, mapOf("body" to "text"))),
+            reminders = listOf(
+                reminder,
+                Reminder(UUID.randomUUID(), 0, ReminderUnit.MINUTES, ReminderTiming.AT_START, enabled = false, deliveries = listOf(NotificationDelivery(UUID.randomUUID(), instance.id))),
+            ),
             notes = mapOf(occurrence to OccurrenceNote("<p>Guest <strong>speaker</strong></p>", BodyFormat.HTML)),
             status = NotificationStatus.ACTIVE,
             next = next?.let { PendingReminder(it, occurrence, reminder.id) },

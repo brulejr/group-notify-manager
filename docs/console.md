@@ -6,7 +6,7 @@ without internet.
 
 | Page | |
 | --- | --- |
-| Dashboard | Counts, what is coming up, the plugins' readiness, recent activity. Reloads itself |
+| Dashboard | Counts; what is coming up, notifications and event reminders together; the next events; the plugins' readiness; recent activity. Reloads itself |
 | All notifications | Filter by text, group and status; pause, resume, send now, edit, delete from the row |
 | New / Edit | The editor, below |
 | A notification | The message as it will be sent, its schedule and next runs, its deliveries (each with a Test button), its history |
@@ -56,17 +56,18 @@ around every occurrence. Any member of the group creates and manages them.
   occurrence.
 - **Reminders**: how long before or after each occurrence, or at its start, each
   switchable off, each with its own subject and body if you open it (the speech
-  bubble), in Markdown.
-- **Deliveries**: the group's instances, as for a notification, used by every reminder.
+  bubble), in Markdown, and each with its own **deliveries**: the group's instances, as
+  for a notification, so the week-before reminder can go to the list and the hour-before
+  one to Discord. A reminder needs at least one.
 
 An event's page lists its coming occurrences with the reminders each will be sent, and
 each one's **note**, as it reads: words for that occurrence's messages only, such as
 "This week: guest speaker". **Add note** or **Edit note** opens the occurrence on a page
 of its own, with the same editor as the body, Markdown or rich text with its preview,
 so the event's page never carries more than one heavy editor. Saving an empty note
-removes it. **Send now** sends the
-event's own words for its next occurrence; **Test** on a delivery sends through it
-alone. Pausing holds every reminder; resuming picks up from now.
+removes it. Each reminder shows where it goes, with **Send now**, which sends it for
+the next occurrence through its deliveries, and **Test** on each of them, which sends
+through that one alone. Pausing holds every reminder; resuming picks up from now.
 
 ## Sending by hand
 

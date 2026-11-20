@@ -55,10 +55,12 @@ class EventPagesTest : WebTest() {
             schedule = ScheduleInput(ScheduleKind.PATTERN, "America/New_York", pattern = "every tuesday at 7pm"),
             properties = listOf(EventProperty("location", "Town hall")),
             reminders = listOf(
-                EventDraft.Reminder(amount = "1", unit = ReminderUnit.DAYS, timing = ReminderTiming.BEFORE),
-                EventDraft.Reminder(amount = "1", unit = ReminderUnit.HOURS, timing = ReminderTiming.BEFORE, subject = "Starting {{event.when}}"),
+                EventDraft.Reminder(amount = "1", unit = ReminderUnit.DAYS, timing = ReminderTiming.BEFORE, deliveries = listOf(NotificationDraft.Delivery(instance = log.id.toString()))),
+                EventDraft.Reminder(
+                    amount = "1", unit = ReminderUnit.HOURS, timing = ReminderTiming.BEFORE, subject = "Starting {{event.when}}",
+                    deliveries = listOf(NotificationDraft.Delivery(instance = log.id.toString(), overrides = mapOf("body" to "text"))),
+                ),
             ),
-            deliveries = listOf(NotificationDraft.Delivery(instance = log.id.toString())),
         )
         return (events.create(draft, alice) as EventResult.Saved).event.id
     }
@@ -72,7 +74,9 @@ class EventPagesTest : WebTest() {
             "/ui/events/$id" to "Coming occurrences",
             "/ui/events/$id/body" to "Add note",
             "/ui/events/$id/edit" to "properties[0].name",
-            "/ui/events/reminder?index=4" to "reminders[4].amount",
+            "/ui/events/reminder?index=4&group=notify_club" to "notifyNextIn(&quot;r4-deliveries&quot;)",
+            "/ui/notifications/delivery?instance=${eventStore.find(id)!!.reminders[0].deliveries[0].instance}&index=2&prefix=reminders[4].deliveries" to "reminders[4].deliveries[2].overrides.body",
+            "/ui/notifications/instances?group=notify_club&list=r4-deliveries&prefix=reminders[4].deliveries" to "#r4-deliveries",
             "/ui/events/property?index=2" to "properties[2].value",
             "/ui/history" to "Club meeting",
             "/ui" to "href=\"/ui/events\"",
@@ -85,6 +89,21 @@ class EventPagesTest : WebTest() {
     }
 
     @Test
+    fun `the dashboard shows the next events and their reminders among what is coming up`() {
+        val id = seed()
+
+        mvc.perform(get("/ui/overview").alice()).andExpect(status().isOk)
+            .andExpect(content().string(containsString("Next events")))
+            .andExpect(content().string(containsString("href=\"/ui/events/$id\"")))
+            .andExpect(content().string(containsString("Club meeting")))
+            // Coming up, beside the notifications: the event's next reminder, by its offset.
+            .andExpect(content().string(org.hamcrest.Matchers.anyOf(containsString(">1 hour before<"), containsString(">1 day before<"))))
+            // Its subject as that reminder sends it, filled.
+            .andExpect(content().string(org.hamcrest.Matchers.not(containsString("{{event.when}}"))))
+        mvc.perform(get("/ui/overview").bob()).andExpect(content().string(org.hamcrest.Matchers.not(containsString("Club meeting"))))
+    }
+
+    @Test
     fun `saving the form creates the event, and a refused one is redrawn against its inputs`() {
         val log = provision()
         fun form() = post("/ui/events").alice().with(csrf())
@@ -93,17 +112,23 @@ class EventPagesTest : WebTest() {
             .param("kind", "PATTERN").param("pattern", "every month on the 4th saturday at 9am").param("zone", "America/New_York")
             .param("properties[0].name", "site").param("properties[0].value", "The park")
             .param("reminders[3].amount", "2").param("reminders[3].unit", "DAYS").param("reminders[3].timing", "BEFORE")
-            .param("deliveries[0].instance", log.id.toString())
+            .param("reminders[3].deliveries[7].instance", log.id.toString()).param("reminders[3].deliveries[7].overrides.body", "text")
 
         mvc.perform(form()).andExpect(header().string("HX-Redirect", startsWith("/ui/events/")))
         val saved = eventStore.list(null).single()
         assertEquals(listOf(EventProperty("site", "The park")), saved.properties)
         assertEquals("2 days before", saved.reminders.single().describe())
+        assertEquals(listOf(mapOf("body" to "text")), saved.reminders.single().deliveries.map { it.overrides })
+        mvc.perform(get("/ui/events/${saved.id}/edit").alice()).andExpect(content().string(containsString("reminders[0].deliveries[0].instance")))
 
         mvc.perform(form().param("properties[1].name", "2nd").param("reminders[5].amount", "nope"))
             .andExpect(header().doesNotExist("HX-Redirect"))
             .andExpect(content().string(containsString("must be letters, digits and _")))
             .andExpect(content().string(containsString("must be a whole number")))
+        // A reminder with nowhere to go.
+        mvc.perform(post("/ui/events").alice().with(csrf()).param("group", "notify_club").param("title", "T").param("subject", "S")
+            .param("body", "B").param("kind", "PATTERN").param("pattern", "every day at 9am").param("reminders[0].amount", "1").param("reminders[0].unit", "HOURS"))
+            .andExpect(content().string(containsString("Add at least one delivery")))
     }
 
     @Test
@@ -132,7 +157,9 @@ class EventPagesTest : WebTest() {
             .andExpect(header().string("HX-Redirect", "/ui/events/$id?saved=noteRemoved"))
         assertNull(eventStore.find(id)!!.notes[occurrence])
 
-        mvc.perform(post("/ui/events/$id/send").alice().with(csrf())).andExpect(content().string(containsString("Sent via Club log")))
+        val reminder = eventStore.find(id)!!.reminders[1].id
+        mvc.perform(post("/ui/events/$id/send").alice().with(csrf()).param("reminderId", reminder.toString()))
+            .andExpect(content().string(containsString("Sent via Club log")))
         mvc.perform(delete("/ui/events/$id").alice().with(csrf())).andExpect(header().string("HX-Redirect", "/ui/events"))
         assertNull(eventStore.find(id))
     }
@@ -144,13 +171,14 @@ class EventPagesTest : WebTest() {
             {"group": "notify_club", "title": "Net", "subject": "Net {{event.when}}", "body": "On {{event.frequency}}",
              "schedule": {"kind": "PATTERN", "pattern": "every week on thursday at 8pm", "zone": "America/New_York"},
              "properties": [{"name": "frequency", "value": "146.52"}],
-             "reminders": [{"amount": 2, "unit": "HOURS", "timing": "BEFORE"}, {"amount": 0, "timing": "AT_START"}],
-             "deliveries": [{"instance": "${log.id}"}]}
+             "reminders": [{"amount": 2, "unit": "HOURS", "timing": "BEFORE", "deliveries": [{"instance": "${log.id}"}]},
+                           {"amount": 0, "timing": "AT_START", "deliveries": [{"instance": "${log.id}", "overrides": {"body": "text"}}]}]}
         """.trimIndent()
 
         val created = mvc.perform(post("/api/events").alice().contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.reminders[1].describe").value("at the start"))
+            .andExpect(jsonPath("$.reminders[1].deliveries[0].overrides.body").value("text"))
             .andReturn().response.contentAsString
         val id = Regex("\"id\":\"([0-9a-f-]{36})\"").find(created)!!.groupValues[1]
         mvc.perform(get("/api/events/$id").bob()).andExpect(status().isNotFound)
@@ -164,7 +192,8 @@ class EventPagesTest : WebTest() {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.notes['$occurrence'].text").value("Contest weekend"))
             .andExpect(jsonPath("$.notes['$occurrence'].format").value("MARKDOWN"))
-        mvc.perform(post("/api/events/$id/send").alice().header("X-Requested-With", "test")).andExpect(jsonPath("$[0].delivered").value(true))
+        val firstReminder = eventStore.find(UUID.fromString(id))!!.reminders[0].id
+        mvc.perform(post("/api/events/$id/send?reminderId=$firstReminder").alice().header("X-Requested-With", "test")).andExpect(jsonPath("$[0].delivered").value(true))
         mvc.perform(delete("/api/events/$id").bob().header("X-Requested-With", "test")).andExpect(status().isNotFound)
         // Its instance is in use by the event.
         mvc.perform(delete("/api/instances/${log.id}").alice().header("X-Requested-With", "test")).andExpect(status().isConflict)

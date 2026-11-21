@@ -6,8 +6,8 @@
   <div class="page-header">
     <div>
       <h1>History</h1>
-      <p class="lead-text">Every change to your groups' notifications and every delivery made of them, newest first.
-        Kept after a notification is deleted.</p>
+      <p class="lead-text">Every change to your groups' messages and events, and every delivery made of them, newest first.
+        Kept after a message or event is deleted.</p>
     </div>
   </div>
 
@@ -37,7 +37,7 @@
     </div>
     <div class="table-responsive">
       <table class="table table-hover">
-        <thead><tr><th>When</th><th>What</th><th>Notification</th><th>Group</th><th>Delivery</th><th>Detail</th><th>By</th></tr></thead>
+        <thead><tr><th>When</th><th>What</th><th>Message or event</th><th>Group</th><th>Delivery</th><th>Detail</th><th>By</th></tr></thead>
         <tbody id="history-rows" th:fragment="rows" hx-target="this" hx-swap="outerHTML" hx-disinherit="*">
         <tr th:each="e : ${events}">
           <td class="text-nowrap small"><time data-format="datetime" th:datetime="${e.occurredAt}"></time></td>

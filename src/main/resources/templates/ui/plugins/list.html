@@ -6,8 +6,8 @@
   <div class="page-header">
     <div>
       <h1>Delivery plugins</h1>
-      <p class="lead-text">The ways a notification can be sent. A group's members set a plugin up for their group as a named
-        <strong>instance</strong>, with its credentials and where it sends; the group's notifications choose among its
+      <p class="lead-text">The ways a message can be sent. A group's members set a plugin up for their group as a named
+        <strong>instance</strong>, with its credentials and where it sends; the group's messages and events choose among its
         instances, and may change only the settings the plugin marks as defaults.</p>
     </div>
   </div>
@@ -38,7 +38,7 @@
               <span class="fw-medium" th:text="${f.label}">label</span>
               <span class="text-danger" th:if="${f.required}">*</span>
               <i class="bi bi-lock text-body-secondary" th:if="${f.secret}" title="secret"></i>
-              <span class="badge text-bg-light border" th:if="${f.overridable}" title="A notification may change it">default</span>
+              <span class="badge text-bg-light border" th:if="${f.overridable}" title="A message may change it">default</span>
               <span class="text-body-secondary" th:if="${!#strings.isEmpty(f.help)}" th:text="'— ' + ${f.help}">help</span>
             </li>
           </ul>

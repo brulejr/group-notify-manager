@@ -24,7 +24,7 @@
     <div class="alert alert-danger py-2 small" th:if="${row.error != null}" th:text="${row.error}">error</div>
     <p class="small text-body-secondary mb-0" th:if="${row.inputs.isEmpty()}">Sent with the instance's own settings.</p>
     <th:block th:unless="${row.inputs.isEmpty()}">
-      <p class="small text-body-secondary">The instance's defaults are filled in; change any for this notification only.</p>
+      <p class="small text-body-secondary">The instance's defaults are filled in; change any for this message only.</p>
       <div class="row g-3">
         <th:block th:each="in : ${row.inputs}"><div th:replace="~{ui/plugins/fields :: field(${in})}"></div></th:block>
       </div>

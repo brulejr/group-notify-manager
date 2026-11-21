@@ -7,7 +7,7 @@
     <div>
       <h1>Events <span class="badge text-bg-secondary align-middle fs-6" th:text="${rows.size()}">0</span></h1>
       <p class="lead-text">What your groups hold, once or on a schedule: a meeting, a net, a field day, each with reminders sent around every
-        occurrence. Alongside the notifications, which are sent on their own schedule.</p>
+        occurrence. Alongside the messages, which are sent on their own schedule.</p>
     </div>
     <div class="actions" th:if="${canCreate}">
       <a th:href="@{/ui/events/new}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New event</a>

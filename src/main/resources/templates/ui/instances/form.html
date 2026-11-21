@@ -8,7 +8,7 @@
       <div class="small mb-1"><a th:href="@{/ui/plugins}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Delivery plugins</a></div>
       <h1 th:text="${existing == null} ? 'New delivery instance' : 'Edit ' + ${existing.name}">New delivery instance</h1>
       <p class="lead-text">A plugin set up for one group under a name: its credentials, where it sends, and the defaults its
-        notifications start with. The group's notifications choose among its instances, and can change only the fields marked as
+        messages start with. The group's messages and events choose among its instances, and can change only the fields marked as
         defaults. Nobody sees a secret once it is saved; it can be replaced, not read back.</p>
     </div>
   </div>
@@ -50,7 +50,7 @@
                   <option th:each="g : ${knownGroups}" th:value="${g}" th:text="${groupNames.get(g) ?: g}" th:selected="${g == form.group}">group</option>
                 </select>
                 <div class="invalid-feedback" th:text="${errors.get('group')}"></div>
-                <div class="form-text" th:text="${existing == null} ? 'Only this group\'s notifications can use it. It cannot be changed later.' : 'Fixed once created.'">help</div>
+                <div class="form-text" th:text="${existing == null} ? 'Only this group\'s messages and events can use it. It cannot be changed later.' : 'Fixed once created.'">help</div>
               </div>
               <div class="col-md-7">
                 <label class="form-label fw-semibold" for="name">Name</label>

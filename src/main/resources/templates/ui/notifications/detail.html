@@ -8,7 +8,7 @@
        hx-target="this" hx-swap="outerHTML" hx-disinherit="*">
     <div class="page-header">
       <div class="min-w-0">
-        <div class="small mb-1"><a th:href="@{/ui/notifications}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Notifications</a></div>
+        <div class="small mb-1"><a th:href="@{/ui/notifications}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Messages</a></div>
         <h1 class="d-flex flex-wrap align-items-center gap-2">
           <span th:text="${n.title}">Title</span>
           <span th:replace="~{ui/layout :: status(${n.status})}"></span>
@@ -32,7 +32,7 @@
         <div class="dropdown">
           <button class="btn btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-label="More"><i class="bi bi-three-dots"></i></button>
           <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" th:href="@{/ui/notifications/{id}/copy(id=${n.id})}"><i class="bi bi-copy me-2"></i>Copy to a new notification</a></li>
+            <li><a class="dropdown-item" th:href="@{/ui/notifications/{id}/copy(id=${n.id})}"><i class="bi bi-copy me-2"></i>Copy to a new message</a></li>
             <li><a class="dropdown-item" th:href="@{/ui/history(notificationId=${n.id})}"><i class="bi bi-clock-history me-2"></i>Full history</a></li>
             <li><hr class="dropdown-divider"></li>
             <li><button type="button" class="dropdown-item text-danger" hx-swap="none" data-confirm-label="Delete"
@@ -125,7 +125,7 @@
                   <span class="badge text-bg-warning ms-1" th:unless="${d.ready}" th:title="${d.reason}">not ready</span></div>
                 <div class="small text-body-secondary text-truncate" th:text="${d.pluginName} + ' · ' + ${d.summary}">summary</div>
                 <div class="small text-body-secondary" th:unless="${d.overridden.isEmpty()}">
-                  <i class="bi bi-sliders me-1"></i>Set for this notification: <span th:text="${#strings.listJoin(d.overridden, ', ')}">Hashtags</span></div>
+                  <i class="bi bi-sliders me-1"></i>Set for this message: <span th:text="${#strings.listJoin(d.overridden, ', ')}">Hashtags</span></div>
               </div>
               <button type="button" class="btn btn-sm btn-outline-secondary" th:if="${canEdit}" title="Send through this delivery only"
                       hx-swap="none" data-confirm-label="Send test"

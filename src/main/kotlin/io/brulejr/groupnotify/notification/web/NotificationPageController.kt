@@ -131,7 +131,7 @@ class NotificationPageController(
     @GetMapping("/new")
     fun create(user: NotifyUser, @RequestParam(required = false) group: String?, model: Model): String {
         val editable = groups.editable(user, notifications.groupsInUse())
-        if (editable.isEmpty()) throw ResponseStatusException(HttpStatus.FORBIDDEN, "You may not create notifications")
+        if (editable.isEmpty()) throw ResponseStatusException(HttpStatus.FORBIDDEN, "You may not create messages")
         val form = NotificationForm.blank(group?.takeIf { it in editable } ?: editable.singleOrNull().orEmpty(), notifications.defaultZone)
         formModel(user, null, form, emptyList(), model)
         return "ui/notifications/form"
@@ -140,7 +140,7 @@ class NotificationPageController(
     @GetMapping("/{id}/edit")
     fun edit(user: NotifyUser, @PathVariable id: UUID, model: Model): String {
         val notification = find(id, user)
-        if (!notifications.canEdit(user, notification)) throw ResponseStatusException(HttpStatus.FORBIDDEN, "You may not change this notification")
+        if (!notifications.canEdit(user, notification)) throw ResponseStatusException(HttpStatus.FORBIDDEN, "You may not change this message")
         formModel(user, notification, NotificationForm.of(notification), emptyList(), model)
         return "ui/notifications/form"
     }
@@ -263,8 +263,8 @@ class NotificationPageController(
                         result.reports.filter { !it.outcome.delivered }.joinToString("; ") { "${it.name}: ${it.outcome.detail}" },
                 )
             }
-            SendResult.NotFound -> Toast.danger("No such notification")
-            SendResult.Forbidden -> Toast.danger("You may not send this notification")
+            SendResult.NotFound -> Toast.danger("No such message")
+            SendResult.Forbidden -> Toast.danger("You may not send this message")
             SendResult.NothingToSend -> Toast.warning("It has no enabled delivery")
         }
         model.addAttribute("toast", toast)
@@ -309,7 +309,7 @@ class NotificationPageController(
                 "ui/notifications/form :: form"
             }
             NotificationResult.NotFound -> throw ResponseStatusException(HttpStatus.NOT_FOUND)
-            NotificationResult.Forbidden -> throw ResponseStatusException(HttpStatus.FORBIDDEN, "You may not change this notification")
+            NotificationResult.Forbidden -> throw ResponseStatusException(HttpStatus.FORBIDDEN, "You may not change this message")
         }
     }
 
@@ -319,8 +319,8 @@ class NotificationPageController(
             when (result) {
                 is NotificationResult.Saved -> Toast.success("$done ${result.notification.title}")
                 is NotificationResult.Invalid -> Toast.danger(result.problems.joinToString("; ") { it.reason.replaceFirstChar(Char::uppercase) })
-                NotificationResult.NotFound -> Toast.danger("No such notification")
-                NotificationResult.Forbidden -> Toast.danger("You may not change this notification")
+                NotificationResult.NotFound -> Toast.danger("No such message")
+                NotificationResult.Forbidden -> Toast.danger("You may not change this message")
             },
         )
         Htmx.trigger(response, Htmx.NOTIFICATIONS_CHANGED)
@@ -328,7 +328,7 @@ class NotificationPageController(
     }
 
     private fun find(id: UUID, user: NotifyUser): Notification =
-        notifications.find(id, user) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "No such notification")
+        notifications.find(id, user) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "No such message")
 
     private fun row(user: NotifyUser, n: Notification) =
         NotificationRow(n, groups.displayName(n.group), notifications.canEdit(user, n), badges(n).toMutableList())

@@ -101,7 +101,7 @@ class InstancePageController(
         val toast = when (val result = instances.delete(id, user)) {
             is InstanceResult.Saved -> Toast.success("Deleted ${result.instance.name}")
             is InstanceResult.InUse -> Toast.danger(
-                "Still used by ${result.notifications.size} notification${if (result.notifications.size == 1) "" else "s"}: " +
+                "Still used by ${result.notifications.size} message${if (result.notifications.size == 1) "" else "s"} or event${if (result.notifications.size == 1) "" else "s"}: " +
                     result.notifications.joinToString(", ") + ". Remove it from them first.",
             )
             InstanceResult.NotFound -> Toast.danger("No such delivery instance")
@@ -157,7 +157,7 @@ class InstancePageController(
             value = if (field.secret) "" else value,
             saved = field.secret && existing != null && !existing.config[field.key].isNullOrBlank(),
             error = errors["config.${field.key}"],
-            note = if (field.overridable) "A default: a notification may change it" else null,
+            note = if (field.overridable) "A default: a message may change it" else null,
         )
     }
 

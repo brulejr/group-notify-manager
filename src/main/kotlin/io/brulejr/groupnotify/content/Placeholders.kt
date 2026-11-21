@@ -34,7 +34,7 @@ object Placeholders {
 
     /** Every placeholder an author can use, with what it stands for. */
     val NAMES = linkedMapOf(
-        "title" to "the notification's title",
+        "title" to "the message's title",
         "group" to "the group's display name",
         "date" to "the date it is sent, e.g. Tuesday, November 10, 2026",
         "time" to "the time it is sent, e.g. 6:00 PM EST",

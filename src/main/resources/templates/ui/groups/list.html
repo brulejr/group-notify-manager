@@ -6,8 +6,8 @@
   <div class="page-header">
     <div>
       <h1>Groups</h1>
-      <p class="lead-text">Notification groups come from Authelia, which takes them from LLDAP: join or leave one there.
-        A group's notifications are seen only by its members<th:block th:if="${me.admin}"> and admins; as an admin you also see groups you are not in</th:block>.</p>
+      <p class="lead-text">Messaging groups come from Authelia, which takes them from LLDAP: join or leave one there.
+        A group's messages and events are seen only by its members<th:block th:if="${me.admin}"> and admins; as an admin you also see groups you are not in</th:block>.</p>
     </div>
   </div>
   <div class="card">
@@ -31,7 +31,7 @@
           </td>
         </tr>
         <tr th:if="${groups.isEmpty()}"><td colspan="7">
-          <div th:replace="~{ui/layout :: empty('bi-people', 'You are in no notification group', 'Ask an administrator to add you to one in LLDAP.')}"></div>
+          <div th:replace="~{ui/layout :: empty('bi-people', 'You are in no messaging group', 'Ask an administrator to add you to one in LLDAP.')}"></div>
         </td></tr>
         </tbody>
       </table>

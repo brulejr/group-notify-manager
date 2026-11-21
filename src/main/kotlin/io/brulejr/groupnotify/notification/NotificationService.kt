@@ -86,7 +86,7 @@ class NotificationService(
 
     /** Holds a notification: nothing is sent until it is resumed. */
     fun pause(id: UUID, user: NotifyUser): NotificationResult = change(id, user) { existing ->
-        if (existing.status != NotificationStatus.ACTIVE) return@change invalid("status", "only an active notification can be paused")
+        if (existing.status != NotificationStatus.ACTIVE) return@change invalid("status", "only an active message can be paused")
         val paused = existing.copy(status = NotificationStatus.PAUSED, nextRunAt = null, updatedBy = user.actor, updatedAt = clock.instant())
         store.save(paused)
         record(paused, AuditEventType.PAUSED, user)
@@ -98,7 +98,7 @@ class NotificationService(
      * not the runs it missed; a one-off at its time, which must not have passed.
      */
     fun resume(id: UUID, user: NotifyUser): NotificationResult = change(id, user) { existing ->
-        if (existing.status != NotificationStatus.PAUSED) return@change invalid("status", "only a paused notification can be resumed")
+        if (existing.status != NotificationStatus.PAUSED) return@change invalid("status", "only a paused message can be resumed")
         val next = existing.schedule.nextAfter(clock.instant())
             ?: return@change invalid("schedule", if (existing.schedule.kind == ScheduleKind.ONCE) "its time has passed; edit it to choose a new one" else "it has no runs left before its end date")
         val resumed = existing.copy(status = NotificationStatus.ACTIVE, nextRunAt = next, updatedBy = user.actor, updatedAt = clock.instant())

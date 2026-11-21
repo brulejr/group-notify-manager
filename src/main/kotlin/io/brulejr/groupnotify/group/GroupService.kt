@@ -53,7 +53,7 @@ class GroupService(private val datafill: GroupDatafill) {
     /** Why [user] cannot put a notification in [group], or null if they can. */
     fun problemWith(user: NotifyUser, group: String): String? = when {
         group.isBlank() -> "must be chosen"
-        !isNotificationGroup(group) -> "is not a notification group"
+        !isNotificationGroup(group) -> "is not a messaging group"
         !user.admin && !user.memberOf(group) -> "you are not a member of it"
         else -> null
     }

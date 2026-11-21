@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{ui/layout :: page(title=${existing == null} ? 'New notification' : 'Edit ' + ${existing.title}, active=${existing == null} ? 'new' : 'notifications', content=~{::main})}">
+      th:replace="~{ui/layout :: page(title=${existing == null} ? 'New message' : 'Edit ' + ${existing.title}, active=${existing == null} ? 'new' : 'notifications', content=~{::main})}">
 <body>
 <main class="console-content">
   <div class="page-header">
     <div>
       <div class="small mb-1">
         <a th:if="${existing != null}" th:href="@{/ui/notifications/{id}(id=${existing.id})}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Back to it</a>
-        <a th:if="${existing == null}" th:href="@{/ui/notifications}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Notifications</a>
+        <a th:if="${existing == null}" th:href="@{/ui/notifications}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Messages</a>
       </div>
-      <h1 th:text="${existing == null} ? 'New notification' : 'Edit ' + ${existing.title}">New notification</h1>
+      <h1 th:text="${existing == null} ? 'New message' : 'Edit ' + ${existing.title}">New message</h1>
       <p class="lead-text">What to say, when to send it, and where. Write the body in Markdown or the rich-text editor; each delivery gets it in the form it suits.</p>
     </div>
   </div>
@@ -147,8 +147,8 @@
             <div id="delivery-list" class="delivery-list" th:attr="data-next=${rows.size()}">
               <th:block th:each="row : ${rows}"><div th:replace="~{ui/notifications/parts :: delivery}"></div></th:block>
             </div>
-            <p class="text-body-secondary small mb-0 delivery-empty">A notification goes out through its group's delivery instances, a groups.io list and
-              a Discord channel say, which its members set up under Delivery plugins. Choose one or more; some let this notification
+            <p class="text-body-secondary small mb-0 delivery-empty">A message goes out through its group's delivery instances, a groups.io list and
+              a Discord channel say, which its members set up under Delivery plugins. Choose one or more; some let this message
               change how it posts.</p>
           </div>
         </div>
@@ -171,7 +171,7 @@
               <div class="d-grid gap-2">
                 <button type="submit" class="btn btn-primary">
                   <span class="htmx-indicator spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
-                  <i class="bi bi-check-lg me-1"></i><span th:text="${existing == null} ? 'Create notification' : 'Save changes'">Save</span></button>
+                  <i class="bi bi-check-lg me-1"></i><span th:text="${existing == null} ? 'Create message' : 'Save changes'">Save</span></button>
                 <a class="btn btn-outline-secondary" th:href="${existing == null} ? @{/ui/notifications} : @{/ui/notifications/{id}(id=${existing.id})}">Cancel</a>
               </div>
             </div>

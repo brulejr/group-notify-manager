@@ -101,9 +101,9 @@ class NotificationServiceTest {
     }
 
     @Test
-    fun `a member may only create in their own groups, an admin in any notification group`() {
+    fun `a member may only create in their own groups, an admin in any messaging group`() {
         assertEquals("you are not a member of it", problems(service.create(f.draft(group = "notify_family"), alice))["group"])
-        assertEquals("is not a notification group", problems(service.create(f.draft(group = "homelab_users"), alice))["group"])
+        assertEquals("is not a messaging group", problems(service.create(f.draft(group = "homelab_users"), alice))["group"])
         val family = f.instance(group = "notify_family", name = "Family channel")
         assertIs<NotificationResult.Saved>(service.create(f.draft(group = "notify_family", deliveries = listOf(f.delivery(family))), admin))
     }

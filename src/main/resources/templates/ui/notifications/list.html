@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{ui/layout :: page(title='Notifications', active='notifications', content=~{::main})}">
+      th:replace="~{ui/layout :: page(title='Messages', active='notifications', content=~{::main})}">
 <body>
 <main class="console-content">
   <div class="page-header">
     <div>
-      <h1>Notifications <span class="badge text-bg-secondary align-middle fs-6" th:text="${total}">0</span></h1>
-      <p class="lead-text">Every notification of the groups you belong to<th:block th:if="${me.admin}">, and as an admin every other group's</th:block>.
+      <h1>Messages <span class="badge text-bg-secondary align-middle fs-6" th:text="${total}">0</span></h1>
+      <p class="lead-text">Every message of the groups you belong to<th:block th:if="${me.admin}">, and as an admin every other group's</th:block>.
         Each is sent once or on a schedule, through one or more deliveries.</p>
     </div>
     <div class="actions" th:if="${canCreate}">
-      <a th:href="@{/ui/notifications/new}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New notification</a>
+      <a th:href="@{/ui/notifications/new}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New message</a>
     </div>
   </div>
 
@@ -32,7 +32,7 @@
     </div>
     <div class="table-responsive">
       <table class="table table-hover">
-        <thead><tr><th>Notification</th><th>Group</th><th>Schedule</th><th>Next run</th><th>Deliveries</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Message</th><th>Group</th><th>Schedule</th><th>Next run</th><th>Deliveries</th><th>Status</th><th></th></tr></thead>
         <tbody id="notification-rows" th:fragment="rows" th:hx-get="@{/ui/notifications/rows}" hx-trigger="notificationsChanged from:body"
                hx-include="#notification-filter" hx-target="this" hx-swap="outerHTML" hx-disinherit="*">
         <tr th:each="row : ${rows}" th:with="n=${row.notification}">
@@ -75,7 +75,7 @@
           </td>
         </tr>
         <tr th:if="${rows.isEmpty()}"><td colspan="7">
-          <div th:replace="~{ui/layout :: empty('bi-bell-slash', 'No notifications match', 'Create one, or change the filter.')}"></div>
+          <div th:replace="~{ui/layout :: empty('bi-bell-slash', 'No messages match', 'Create one, or change the filter.')}"></div>
         </td></tr>
         </tbody>
       </table>

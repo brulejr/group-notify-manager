@@ -22,7 +22,7 @@
             <span class="badge text-bg-warning ms-1" th:unless="${r.ready}" th:title="${r.reason}">not ready</span></div>
           <div class="small text-body-secondary text-truncate" th:text="${r.pluginName} + ' · ' + ${r.summary}">groups.io · brulenet</div>
           <div class="small text-body-secondary"
-               th:text="${r.usedBy.isEmpty()} ? 'Not used by any notification' : 'Used by ' + ${r.usedBy.size()} + ' notification' + (${r.usedBy.size() == 1} ? '' : 's')"
+               th:text="${r.usedBy.isEmpty()} ? 'Not used by anything' : 'Used by ' + ${r.usedBy.size()} + ' message or event' + (${r.usedBy.size() == 1} ? '' : 's')"
                th:title="${#strings.listJoin(r.usedBy, ', ')}">used by</div>
         </div>
         <th:block th:if="${r.canManage}">

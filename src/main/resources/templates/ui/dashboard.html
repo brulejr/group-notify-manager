@@ -9,7 +9,7 @@
       <p class="lead-text">What your groups have coming up, what went out lately, and whether every way of sending is ready.</p>
     </div>
     <div class="actions" th:if="${canCreate}">
-      <a th:href="@{/ui/notifications/new}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New notification</a>
+      <a th:href="@{/ui/notifications/new}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New message</a>
     </div>
   </div>
 
@@ -38,7 +38,7 @@
       <div class="col-xl-7">
         <div class="card h-100">
           <div class="card-header"><i class="bi bi-calendar-event"></i>Coming up
-            <span class="ms-auto small fw-normal"><a th:href="@{/ui/notifications}">Notifications</a> · <a th:href="@{/ui/events}">Events</a></span></div>
+            <span class="ms-auto small fw-normal"><a th:href="@{/ui/notifications}">Messages</a> · <a th:href="@{/ui/events}">Events</a></span></div>
           <!--/* What is about to be sent: notifications' next runs and events' next reminders, together. */-->
           <div class="list-group list-group-flush">
             <a class="list-group-item list-group-item-action upcoming-item" th:each="u : ${o.upcoming}" th:href="@{${u.href}}">
@@ -55,7 +55,7 @@
               <span class="badge border" th:classappend="${u.event} ? 'text-bg-info' : 'text-bg-light'" th:text="${u.label}">Recurring</span>
             </a>
             <th:block th:if="${o.upcoming.isEmpty()}">
-              <div th:replace="~{ui/layout :: empty('bi-calendar', 'Nothing scheduled', 'Active notifications and event reminders that are due appear here.')}"></div>
+              <div th:replace="~{ui/layout :: empty('bi-calendar', 'Nothing scheduled', 'Active messages and event reminders that are due appear here.')}"></div>
             </th:block>
           </div>
         </div>

@@ -41,7 +41,7 @@
         <span class="console-logo"><i class="bi bi-megaphone"></i></span>
         <span>
           <span class="d-block fw-semibold text-white lh-sm" th:text="${consoleTitle}">Group Notify</span>
-          <span class="d-block small console-brand-sub">Scheduled notifications</span>
+          <span class="d-block small console-brand-sub">Scheduled messages</span>
         </span>
       </a>
       <button type="button" class="btn-close btn-close-white d-lg-none ms-auto" data-bs-dismiss="offcanvas"
@@ -51,12 +51,10 @@
       <div class="console-nav-label">Overview</div>
       <a th:href="@{/ui}" class="nav-link" th:classappend="${active == 'dashboard'} ? 'active'">
         <i class="bi bi-speedometer2"></i><span>Dashboard</span></a>
-      <div class="console-nav-label">Notifications</div>
-      <a th:href="@{/ui/notifications}" class="nav-link" th:classappend="${active == 'notifications'} ? 'active'">
-        <i class="bi bi-bell"></i><span>All notifications</span></a>
-      <a th:href="@{/ui/notifications/new}" class="nav-link" th:classappend="${active == 'new'} ? 'active'"
-         th:if="${canCreate}">
-        <i class="bi bi-plus-circle"></i><span>New notification</span></a>
+      <div class="console-nav-label">Messages</div>
+      <!--/* One entry for the messages and their editor: the list has the New message button. */-->
+      <a th:href="@{/ui/notifications}" class="nav-link" th:classappend="${active == 'notifications' or active == 'new'} ? 'active'">
+        <i class="bi bi-envelope"></i><span>Messages</span></a>
       <a th:href="@{/ui/events}" class="nav-link" th:classappend="${active == 'events'} ? 'active'">
         <i class="bi bi-calendar-event"></i><span>Events</span></a>
       <a th:href="@{/ui/history}" class="nav-link" th:classappend="${active == 'history'} ? 'active'">

@@ -24,6 +24,6 @@ data class InstanceErrors(
         fun of(problems: List<InstanceProblem>) = InstanceErrors(problems.joinToString("; ") { "${it.field}: ${it.reason}" }, problems)
 
         fun inUse(notifications: List<String>) =
-            InstanceErrors("still used by ${notifications.size} notification(s): ${notifications.joinToString()}", notifications = notifications)
+            InstanceErrors("still used by ${notifications.size} message(s) or event(s): ${notifications.joinToString()}", notifications = notifications)
     }
 }

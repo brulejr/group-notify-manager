@@ -72,6 +72,17 @@ class ConsolePagesTest : WebTest() {
     }
 
     @Test
+    fun `the menu has one Messages entry, which stays lit in the editor`() {
+        val menu = { path: String -> mvc.perform(get(path).alice()).andReturn().response.contentAsString.substringBefore("console-content") }
+
+        val list = menu("/ui/notifications")
+        assertTrue(">Messages<" in list)
+        assertTrue("All notifications" !in list && "New notification" !in list)
+        // The editor has no menu entry of its own: Messages stays lit.
+        assertTrue("href=\"/ui/notifications\" class=\"nav-link active\"" in menu("/ui/notifications/new"))
+    }
+
+    @Test
     fun `the root goes to the dashboard`() {
         mvc.perform(get("/").alice()).andExpect(status().is3xxRedirection).andExpect(header().string("Location", "/ui"))
     }
@@ -86,7 +97,7 @@ class ConsolePagesTest : WebTest() {
             "/ui/overview" to "Net night",
             "/ui/notifications" to "Net night",
             "/ui/notifications/rows?status=ACTIVE" to "Net night",
-            "/ui/notifications/new" to "New notification",
+            "/ui/notifications/new" to "New message",
             "/ui/notifications/$recurring" to "<strong>146.52</strong>",
             "/ui/notifications/$once" to "One-off",
             "/ui/notifications/$recurring/body" to "Next runs",
@@ -180,7 +191,7 @@ class ConsolePagesTest : WebTest() {
 
         mvc.perform(delete("/ui/instances/${log!!.id}").root().with(csrf()))
             .andExpect(header().string("HX-Trigger", "instancesChanged"))
-            .andExpect(content().string(containsString("Still used by 1 notification: Net night")))
+            .andExpect(content().string(containsString("Still used by 1 message or event: Net night")))
         assertTrue(instanceStore.find(log!!.id) != null)
     }
 

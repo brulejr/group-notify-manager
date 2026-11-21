@@ -29,7 +29,7 @@ class LogPlugin : DeliveryPlugin {
 
     override val id = "log"
     override val name = "Log only"
-    override val description = "Writes the notification to the application log. Sends nothing; for testing schedules."
+    override val description = "Writes the message to the application log. Sends nothing; for testing schedules."
     override val icon = "journal-text"
 
     override val fields = listOf(

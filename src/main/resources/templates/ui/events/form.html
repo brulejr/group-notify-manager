@@ -127,7 +127,7 @@
                 </th:block>
                 <dt><code>{{event.<em>name</em>}}</code></dt><dd>each property, by its name</dd>
               </dl>
-              <p class="text-body-secondary">And as for any notification, filled as it is sent:</p>
+              <p class="text-body-secondary">And as for any message, filled as it is sent:</p>
               <dl class="props placeholders mb-0">
                 <th:block th:each="p : ${placeholders}">
                   <dt><code th:text="'{{' + ${p.key} + '}}'">{{date}}</code></dt><dd th:text="${p.value}">the date</dd>

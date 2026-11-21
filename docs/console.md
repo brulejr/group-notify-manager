@@ -9,7 +9,7 @@ The console calls them **messages**: what the code and the REST API call notific
 
 | Page | |
 | --- | --- |
-| Dashboard | Counts; what is coming up, messages and event reminders together; the next events; the plugins' readiness; recent activity. Reloads itself |
+| Dashboard | Counts; what is coming up, messages and event reminders together; the next events; the plugins' readiness; recent activity. Reloads itself. **New** starts a message or an event |
 | Messages | The one menu entry for them: filter by text, group and status; pause, resume, send now, edit, delete from the row; **New message** |
 | New / Edit | The editor, below |
 | A message | As it will be sent, its schedule and next runs, its deliveries (each with a Test button), its history |

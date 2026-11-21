@@ -8,8 +8,18 @@
       <h1 th:text="'Hello, ' + ${me.displayName}">Hello</h1>
       <p class="lead-text">What your groups have coming up, what went out lately, and whether every way of sending is ready.</p>
     </div>
+    <!--/* One New button for both kinds: a message, sent on its own schedule, or an event, with reminders. */-->
     <div class="actions" th:if="${canCreate}">
-      <a th:href="@{/ui/notifications/new}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New message</a>
+      <div class="dropdown">
+        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-plus-lg me-1"></i>New</button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" th:href="@{/ui/notifications/new}"><i class="bi bi-envelope me-2"></i>Message
+            <span class="d-block small text-body-secondary ms-4">Sent once or on a schedule</span></a></li>
+          <li><a class="dropdown-item" th:href="@{/ui/events/new}"><i class="bi bi-calendar-event me-2"></i>Event
+            <span class="d-block small text-body-secondary ms-4">With reminders around each occurrence</span></a></li>
+        </ul>
+      </div>
     </div>
   </div>
 

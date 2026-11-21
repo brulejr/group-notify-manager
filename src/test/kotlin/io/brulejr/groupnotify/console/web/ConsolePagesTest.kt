@@ -83,6 +83,17 @@ class ConsolePagesTest : WebTest() {
     }
 
     @Test
+    fun `the dashboard's New menu offers a message and an event, to those who may create them`() {
+        val page = mvc.perform(get("/ui").alice()).andReturn().response.contentAsString
+
+        assertTrue("href=\"/ui/notifications/new\"" in page && "href=\"/ui/events/new\"" in page)
+        assertTrue(">New message<" !in page)
+        // In no messaging group, not an admin: nothing to create.
+        val outsider = mvc.perform(get("/ui").signedIn("dave", "homelab_users")).andReturn().response.contentAsString
+        assertTrue("href=\"/ui/events/new\"" !in outsider)
+    }
+
+    @Test
     fun `the root goes to the dashboard`() {
         mvc.perform(get("/").alice()).andExpect(status().is3xxRedirection).andExpect(header().string("Location", "/ui"))
     }

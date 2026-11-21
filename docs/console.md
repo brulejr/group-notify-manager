@@ -14,8 +14,9 @@ The console calls them **messages**: what the code and the REST API call notific
 | New / Edit | The editor, below |
 | A message | As it will be sent, its schedule and next runs, its deliveries (each with a Test button), its history |
 | History | Every change and delivery in your groups; filter by group and kind, load older |
-| Groups | Your messaging groups, with counts; start a message in one |
 | Delivery plugins | Your groups' delivery instances, and each plugin, whether it is ready and what an instance is set up with. Those who manage a group create, edit and delete its instances here; admins also see where each plugin came from |
+| Groups | Your messaging groups, with counts; each links to its messages and its history |
+| Users | Admins only. Everyone who has used the console or the API: their groups as Authelia last listed them, when last seen and when their visit began, how many visits, the last address and browser, and what they changed lately. Each person's page lists their recent actions, links to LLDAP when `LLDAP_URL` is set, and can **Forget** them. Accounts are managed in LLDAP, not here |
 
 ## Writing a message
 

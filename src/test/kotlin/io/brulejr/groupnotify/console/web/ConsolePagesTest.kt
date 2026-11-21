@@ -94,6 +94,14 @@ class ConsolePagesTest : WebTest() {
     }
 
     @Test
+    fun `the Groups page links to each group's messages and history, and starts nothing`() {
+        mvc.perform(get("/ui/groups").alice())
+            .andExpect(status().isOk)
+            .andExpect(content().string(containsString("/ui/history?group=notify_club")))
+            .andExpect(content().string(not(containsString("/ui/notifications/new"))))
+    }
+
+    @Test
     fun `the root goes to the dashboard`() {
         mvc.perform(get("/").alice()).andExpect(status().is3xxRedirection).andExpect(header().string("Location", "/ui"))
     }
@@ -132,6 +140,12 @@ class ConsolePagesTest : WebTest() {
         )
         pages.forEach { (path, text) ->
             mvc.perform(get(path).alice())
+                .andExpect(status().isOk)
+                .andExpect(content().string(containsString(text)))
+        }
+        // The admins' pages, with Alice recorded by the requests above.
+        mapOf("/ui/users" to "/ui/users/alice", "/ui/users/alice" to "What they did").forEach { (path, text) ->
+            mvc.perform(get(path).root())
                 .andExpect(status().isOk)
                 .andExpect(content().string(containsString(text)))
         }

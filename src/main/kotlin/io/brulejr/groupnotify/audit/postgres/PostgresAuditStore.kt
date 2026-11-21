@@ -8,6 +8,7 @@
  */
 package io.brulejr.groupnotify.audit.postgres
 
+import io.brulejr.groupnotify.audit.ActorActivity
 import io.brulejr.groupnotify.audit.AuditEvent
 import io.brulejr.groupnotify.audit.AuditEventType
 import io.brulejr.groupnotify.audit.AuditPort
@@ -60,6 +61,13 @@ class PostgresAuditStore(private val jdbc: JdbcClient) : AuditPort {
             .list()
     }
 
+    override fun activity(since: Instant): Map<String, ActorActivity> =
+        jdbc.sql("SELECT actor, count(*) AS n, max(occurred_at) AS last_at FROM audit_events WHERE occurred_at >= :since GROUP BY actor")
+            .param("since", since.toTimestamptz())
+            .query { rs, _ -> rs.getString("actor") to ActorActivity(rs.getString("actor"), rs.getLong("n"), checkNotNull(rs.getInstant("last_at"))) }
+            .list()
+            .toMap()
+
     override fun count(query: AuditQuery): Map<AuditEventType, Long> {
         val (where, params) = where(query, paging = false)
         return jdbc.sql("SELECT type, count(*) AS n FROM audit_events $where GROUP BY type")
@@ -80,6 +88,7 @@ class PostgresAuditStore(private val jdbc: JdbcClient) : AuditPort {
         }
         query.notificationId?.let { clauses += "notification_id = :notificationId"; params["notificationId"] = it }
         query.eventId?.let { clauses += "event_id = :eventId"; params["eventId"] = it }
+        query.actor?.let { clauses += "actor = :actor"; params["actor"] = it }
         query.types?.let {
             if (it.isEmpty()) clauses += "false" else { clauses += "type IN (:types)"; params["types"] = it.map { t -> t.name } }
         }

@@ -48,6 +48,12 @@ class AuditService(
     /** Every group's counts since [since], for health. */
     fun counts(since: Instant): Map<AuditEventType, Long> = store.count(AuditQuery(since = since))
 
+    /** Per person, what they did since [since]: for the admins' Users page, whoever's groups. */
+    fun activity(since: Instant): Map<String, ActorActivity> = store.activity(since)
+
+    /** What [actor] did, newest first, whatever group: for the admins' Users page. */
+    fun byActor(actor: String, limit: Int): List<AuditEvent> = store.find(AuditQuery(actor = actor, limit = limit))
+
     private fun scoped(viewer: NotifyUser, query: AuditQuery): AuditQuery {
         val allowed = groups.visibilityFilter(viewer) ?: return query
         return query.copy(groups = query.groups?.intersect(allowed) ?: allowed)

@@ -22,6 +22,9 @@ interface AuditPort {
     /** How many events of each type match [query], ignoring its paging. */
     fun count(query: AuditQuery): Map<AuditEventType, Long>
 
+    /** Per actor, how many events they caused since [since], and when the latest was. */
+    fun activity(since: Instant): Map<String, ActorActivity>
+
     /** Deletes events older than [cutoff], returning how many went. */
     fun purge(cutoff: Instant): Int
 }

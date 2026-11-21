@@ -37,6 +37,11 @@ class InMemoryAuditStore(private val capacity: Int = 10_000) : AuditPort {
         events.filter { matches(it, query) }.groupingBy { it.type }.eachCount().mapValues { it.value.toLong() }
 
     @Synchronized
+    override fun activity(since: Instant): Map<String, ActorActivity> =
+        events.filter { it.occurredAt >= since }.groupBy { it.actor }
+            .mapValues { (actor, mine) -> ActorActivity(actor, mine.size.toLong(), mine.maxOf { it.occurredAt }) }
+
+    @Synchronized
     override fun purge(cutoff: Instant): Int {
         val before = events.size
         events.removeAll { it.occurredAt < cutoff }
@@ -47,6 +52,7 @@ class InMemoryAuditStore(private val capacity: Int = 10_000) : AuditPort {
         (query.groups == null || event.group in query.groups) &&
             (query.notificationId == null || event.notificationId == query.notificationId) &&
             (query.eventId == null || event.eventId == query.eventId) &&
+            (query.actor == null || event.actor == query.actor) &&
             (query.types == null || event.type in query.types) &&
             (query.since == null || event.occurredAt >= query.since)
 }

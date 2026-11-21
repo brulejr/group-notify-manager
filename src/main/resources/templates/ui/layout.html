@@ -60,10 +60,12 @@
       <a th:href="@{/ui/history}" class="nav-link" th:classappend="${active == 'history'} ? 'active'">
         <i class="bi bi-clock-history"></i><span>History</span></a>
       <div class="console-nav-label">Setup</div>
-      <a th:href="@{/ui/groups}" class="nav-link" th:classappend="${active == 'groups'} ? 'active'">
-        <i class="bi bi-people"></i><span>Groups</span></a>
       <a th:href="@{/ui/plugins}" class="nav-link" th:classappend="${active == 'plugins'} ? 'active'">
         <i class="bi bi-plug"></i><span>Delivery plugins</span></a>
+      <a th:href="@{/ui/groups}" class="nav-link" th:classappend="${active == 'groups'} ? 'active'">
+        <i class="bi bi-people"></i><span>Groups</span></a>
+      <a th:href="@{/ui/users}" class="nav-link" th:classappend="${active == 'users'} ? 'active'" th:if="${me != null and me.admin}">
+        <i class="bi bi-person-badge"></i><span>Users</span></a>
       <th:block th:if="${me != null and me.admin}">
         <div class="console-nav-label">System</div>
         <a th:href="@{/mgmt/health}" class="nav-link" hx-boost="false" target="_blank" rel="noopener">

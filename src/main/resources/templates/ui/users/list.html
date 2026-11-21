@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{ui/layout :: page(title='Users', active='users', content=~{::main})}">
+<body>
+<main class="console-content">
+  <div class="page-header">
+    <div>
+      <h1>Users <span class="badge text-bg-secondary align-middle fs-6" th:text="${rows.size()}">0</span></h1>
+      <p class="lead-text">Everyone who has used the console or the API, as Authelia last described them, and when. Accounts and
+        group memberships are managed in LLDAP; nothing here grants anything. A <strong>visit</strong> is requests no more than half an
+        hour apart, the nearest thing to a sign-in behind Authelia.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead><tr><th>User</th><th>Groups</th><th>Last seen</th><th>Visits</th><th>Last address</th>
+          <th th:text="'Actions, ' + ${activityDays} + ' days'">Actions</th></tr></thead>
+        <tbody>
+        <tr th:each="r : ${rows}" th:with="u=${r.record}">
+          <td class="min-w-0">
+            <a class="fw-semibold text-decoration-none" th:href="@{/ui/users/{name}(name=${u.username})}" th:text="${u.displayName}">Name</a>
+            <span class="badge text-bg-primary ms-1" th:if="${u.admin}"><i class="bi bi-shield-lock me-1"></i>Admin</span>
+            <div class="small text-body-secondary mono" th:text="${u.username}">username</div>
+            <div class="small text-body-secondary text-truncate" th:if="${u.email != null}" th:text="${u.email}">email</div>
+          </td>
+          <td>
+            <th:block th:each="g : ${r.messagingGroups}"><span th:replace="~{ui/layout :: group(${g}, ${groupNames.get(g) ?: g})}"></span></th:block>
+            <span class="small text-body-secondary" th:if="${r.messagingGroups.isEmpty()}">none</span>
+          </td>
+          <td class="small text-nowrap">
+            <time data-format="relative" th:datetime="${u.lastSeen}"></time>
+            <div class="text-body-secondary">visit from <time data-format="relative" th:datetime="${u.visitStartedAt}"></time></div>
+          </td>
+          <td class="small" th:text="${u.visits}">3</td>
+          <td class="small">
+            <span class="mono" th:text="${u.lastAddress ?: '—'}">10.0.0.1</span>
+            <div class="text-body-secondary" th:if="${r.browser != null}" th:text="${r.browser}">Firefox on Linux</div>
+          </td>
+          <td class="small text-nowrap">
+            <th:block th:if="${r.activity != null}"><span th:text="${r.activity.events}">5</span>,
+              last <time data-format="relative" th:datetime="${r.activity.lastAt}"></time></th:block>
+            <span class="text-body-secondary" th:if="${r.activity == null}">none</span>
+          </td>
+        </tr>
+        <tr th:if="${rows.isEmpty()}"><td colspan="6" class="text-body-secondary">Nobody yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+</body>
+</html>

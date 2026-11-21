@@ -49,6 +49,12 @@ abstract class WebTest {
     @Autowired
     lateinit var eventStore: io.brulejr.groupnotify.event.EventPort
 
+    @Autowired
+    lateinit var userStore: io.brulejr.groupnotify.user.UserPort
+
+    @Autowired
+    lateinit var userService: io.brulejr.groupnotify.user.UserService
+
     lateinit var mvc: MockMvc
 
     @BeforeEach
@@ -58,6 +64,8 @@ abstract class WebTest {
         store.list(null).forEach { store.delete(it.id) }
         eventStore.list(null).forEach { eventStore.delete(it.id) }
         instanceStore.list(null).forEach { instanceStore.delete(it.id) }
+        userStore.list().forEach { userStore.delete(it.username) }
+        userService.clearCache()
     }
 
     /**

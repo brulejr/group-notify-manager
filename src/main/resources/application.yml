@@ -90,6 +90,15 @@ notify:
   events:
     store: ${EVENT_STORE:postgres}
 
+  # Who uses the system, for the admins' Users page. A visit is requests no further apart
+  # than visit-gap; a person's record is written at most every touch-interval. With
+  # lldap-url set, each person links to their LLDAP page.
+  users:
+    store: ${USER_STORE:postgres}
+    touch-interval: 5m
+    visit-gap: 30m
+    lldap-url: ${LLDAP_URL:}
+
   audit:
     store: ${AUDIT_STORE:postgres}
     retention: 365d

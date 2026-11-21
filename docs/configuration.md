@@ -34,6 +34,9 @@ of the boot jar) imports `.env` and sets the development user.
 | `notify.instances.store` | `INSTANCE_STORE` | `postgres` | or `memory` |
 | `notify.events.store` | `EVENT_STORE` | `postgres` | or `memory` |
 | `notify.events.max-reminders`, `.max-properties`, `.max-deliveries` | | 20, 30, 10 | Per event |
+| `notify.users.store` | `USER_STORE` | `postgres` | or `memory` |
+| `notify.users.touch-interval`, `.visit-gap` | | 5m, 30m | A person's record is written at most every touch-interval; requests further apart than visit-gap start a new visit |
+| `notify.users.lldap-url` | `LLDAP_URL` | none | When set, the Users page links each person to their LLDAP page |
 | `notify.instances.secret-key` | `NOTIFY_SECRET_KEY` | none: a key for the run | 32 bytes in base64; encrypts instance secrets. Back it up |
 | `notify.dispatch.enabled` | | true | Off: nothing is sent on schedule |
 | `notify.dispatch.poll-interval` | | 15s | |

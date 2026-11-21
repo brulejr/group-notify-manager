@@ -33,6 +33,7 @@ services:
       LOGOUT_URL: ${LOGOUT_URL:-}
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
       DEFAULT_ZONE: ${DEFAULT_ZONE:-America/New_York}
+      LLDAP_URL: ${LLDAP_URL:-}
       CONSOLE_TITLE: ${CONSOLE_TITLE:-Group Notify}
       MAIL_HOST: ${MAIL_HOST:-}
       MAIL_PORT: ${MAIL_PORT:-587}

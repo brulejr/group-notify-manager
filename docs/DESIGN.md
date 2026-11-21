@@ -37,6 +37,7 @@ gets them.
 | `event` | Events: a group's dated or recurring happenings, their properties, reminders relative to each occurrence, and occurrence notes |
 | `dispatch` | The scheduler that finds due notifications and event reminders, and Send now |
 | `audit` | The history of changes and deliveries |
+| `user` | Who uses the system, for admins: a record per person kept as they make requests, with their actions from the audit trail |
 | `console` | The dashboard and the pieces every page shares |
 | `platform` | Clock, PostgreSQL schema migration, store type |
 
@@ -44,7 +45,20 @@ Dependencies run one way: `security` ← `group` ← `audit` ← `instance` ←
 `notification` ← `dispatch`, with `delivery` used by `instance` and `dispatch`, and
 `content` by `notification` and `dispatch`. `instance` learns which notifications use
 an instance through `InstanceUsage`, which `notification` provides, rather than by
-depending on it.
+depending on it. `user` depends on `audit` and `security`; nothing depends on it.
+
+## Users
+
+The application never sees a sign-in behind forward-auth, so `UserActivityInterceptor`
+notes every signed-in request under `/ui` and `/api`, and `UserService.seen` keeps one
+record per person: their name, email, groups and admin flag as Authelia last sent them,
+first and last seen, the last address (`X-Forwarded-For`'s first) and browser. A
+**visit** is requests no further apart than `visit-gap` (30m); its start stands in for
+the last sign-in. A record is written at most every `touch-interval` (5m), sooner when a
+visit begins or something about the person changes; a cache keeps most requests from
+reading the store. Nothing in a record grants anything: permissions come from the
+request's groups. Admins see the records with the audit trail's count of each person's
+actions over 30 days, and may forget one; accounts stay in LLDAP, linked by `lldap-url`.
 
 ## Model
 
@@ -222,7 +236,7 @@ History is filtered by group exactly as notifications are.
 
 PostgreSQL in its own schema (`group_notify`), migrated by Flyway on first use; or
 memory, for tests and trying it out. Tables: `notifications` (a pattern schedule in `pattern`, since V3), `events` and
-`event_deliveries` (V4; properties, reminders and notes as `jsonb`), `deliveries` (cascade
+`event_deliveries` (V4; properties, reminders and notes as `jsonb`), `users` (V6; groups as `jsonb`), `deliveries` (cascade
 delete with their notification; a foreign key to `plugin_instances`, so an instance in
 use cannot be deleted), `plugin_instances` (configuration as `jsonb`, secret values
 sealed as `enc:v1:…`), `audit_events`.

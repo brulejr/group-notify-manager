@@ -1,18 +1,20 @@
 info:
-  name: Send Now
+  name: Get Message History
   type: http
-  seq: 8
+  seq: 2
 
 http:
-  method: POST
-  url: "{{notify_url}}/api/notifications/{{notification_id}}/send"
+  method: GET
+  url: "{{notify_url}}/api/audit"
   headers:
     - name: Remote-User
       value: "{{remote_user}}"
     - name: Remote-Groups
       value: "{{remote_groups}}"
-    - name: X-Requested-With
-      value: bruno
+  params:
+    - name: notificationId
+      value: "{{message_id}}"
+      type: query
   auth: inherit
 
 settings:

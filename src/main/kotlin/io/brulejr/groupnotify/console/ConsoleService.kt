@@ -51,7 +51,7 @@ class ConsoleService(
     /** The next [count] things to be sent, notifications and event reminders together, soonest first. */
     private fun upcoming(user: NotifyUser, count: Int): List<ComingUp> {
         val runs = notifications.upcoming(user, count).map { n ->
-            ComingUp(checkNotNull(n.nextRunAt), n.schedule.zone, n.title, n.subject, n.group, n.schedule.kind.label, "/ui/notifications/${n.id}", event = false)
+            ComingUp(checkNotNull(n.nextRunAt), n.schedule.zone, n.title, n.subject, n.group, n.schedule.kind.label, "/ui/messages/${n.id}", event = false)
         }
         val reminders = events.list(user).flatMap { e ->
             events.upcoming(e, count).map { pending ->

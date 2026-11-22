@@ -64,7 +64,7 @@
     <div class="reminder-deliveries mt-2" th:with="menuList='r' + ${i} + '-deliveries', menuPrefix='reminders[' + ${i} + '].deliveries'">
       <div class="d-flex align-items-center gap-2 mb-2">
         <span class="small fw-semibold"><i class="bi bi-send me-1"></i>Sent through</span>
-        <div class="ms-auto" th:hx-get="@{/ui/notifications/instances(list=${menuList}, prefix=${menuPrefix})}" hx-trigger="change from:#group"
+        <div class="ms-auto" th:hx-get="@{/ui/messages/instances(list=${menuList}, prefix=${menuPrefix})}" hx-trigger="change from:#group"
              hx-include="#group" hx-target="this" hx-swap="innerHTML" hx-disinherit="*">
           <div th:replace="~{ui/notifications/parts :: instanceMenu}"></div>
         </div>

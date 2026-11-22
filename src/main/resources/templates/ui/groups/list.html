@@ -16,7 +16,7 @@
         <thead><tr><th>Group</th><th>Name</th><th>Active</th><th>Paused</th><th>All</th><th>Next run</th><th></th></tr></thead>
         <tbody>
         <tr th:each="g : ${groups}">
-          <td><a class="fw-semibold text-decoration-none" th:href="@{/ui/notifications(group=${g.name})}" th:text="${g.displayName}">Club</a>
+          <td><a class="fw-semibold text-decoration-none" th:href="@{/ui/messages(group=${g.name})}" th:text="${g.displayName}">Club</a>
             <span class="badge text-bg-light border ms-1" th:unless="${g.member}" title="You are not a member; you see it as an admin">not a member</span></td>
           <td class="mono small" th:text="${g.name}">notify_club</td>
           <td th:text="${g.active}">0</td>

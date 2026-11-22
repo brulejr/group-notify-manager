@@ -1,11 +1,11 @@
 info:
-  name: Update Notification
+  name: Update Message
   type: http
   seq: 4
 
 http:
   method: PUT
-  url: "{{notify_url}}/api/notifications/{{notification_id}}"
+  url: "{{notify_url}}/api/messages/{{message_id}}"
   headers:
     - name: Remote-User
       value: "{{remote_user}}"

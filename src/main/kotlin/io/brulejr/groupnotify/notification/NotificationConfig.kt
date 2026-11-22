@@ -13,6 +13,7 @@ import io.brulejr.groupnotify.group.GroupService
 import io.brulejr.groupnotify.instance.InstanceService
 import io.brulejr.groupnotify.instance.InstanceUsage
 import io.brulejr.groupnotify.notification.postgres.PostgresNotificationStore
+import io.brulejr.groupnotify.notification.web.LegacyPathRedirect
 import io.brulejr.groupnotify.platform.DatabaseMigrator
 import io.brulejr.groupnotify.platform.StoreType
 import org.springframework.beans.factory.ObjectProvider
@@ -45,6 +46,10 @@ class NotificationConfig {
     }
 
     /** Which notifications send through an instance, so an instance in use is not deleted. */
+    /** The paths before messages were called so; see [LegacyPathRedirect]. */
+    @Bean
+    fun legacyPathRedirect() = LegacyPathRedirect()
+
     @Bean
     fun instanceUsage(store: NotificationPort) = InstanceUsage { id ->
         store.list(null).filter { n -> n.deliveries.any { it.instance == id } }.map { it.title }

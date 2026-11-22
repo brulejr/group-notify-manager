@@ -10,13 +10,13 @@
         Each is sent once or on a schedule, through one or more deliveries.</p>
     </div>
     <div class="actions" th:if="${canCreate}">
-      <a th:href="@{/ui/notifications/new}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New message</a>
+      <a th:href="@{/ui/messages/new}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New message</a>
     </div>
   </div>
 
   <div class="card">
     <div class="card-header">
-      <form id="notification-filter" class="filter-bar w-100" th:hx-get="@{/ui/notifications/rows}" hx-target="#notification-rows"
+      <form id="notification-filter" class="filter-bar w-100" th:hx-get="@{/ui/messages/rows}" hx-target="#notification-rows"
             hx-swap="outerHTML" hx-trigger="input changed delay:250ms from:#notification-q, change from:select, submit">
         <div class="search-input flex-grow-1"><i class="bi bi-search"></i>
           <input class="form-control" id="notification-q" type="search" name="q" th:value="${q}" placeholder="Search title or subject"></div>
@@ -33,11 +33,11 @@
     <div class="table-responsive">
       <table class="table table-hover">
         <thead><tr><th>Message</th><th>Group</th><th>Schedule</th><th>Next run</th><th>Deliveries</th><th>Status</th><th></th></tr></thead>
-        <tbody id="notification-rows" th:fragment="rows" th:hx-get="@{/ui/notifications/rows}" hx-trigger="notificationsChanged from:body"
+        <tbody id="notification-rows" th:fragment="rows" th:hx-get="@{/ui/messages/rows}" hx-trigger="notificationsChanged from:body"
                hx-include="#notification-filter" hx-target="this" hx-swap="outerHTML" hx-disinherit="*">
         <tr th:each="row : ${rows}" th:with="n=${row.notification}">
           <td class="min-w-0">
-            <a class="fw-semibold text-decoration-none" th:href="@{/ui/notifications/{id}(id=${n.id})}" th:text="${n.title}">title</a>
+            <a class="fw-semibold text-decoration-none" th:href="@{/ui/messages/{id}(id=${n.id})}" th:text="${n.title}">title</a>
             <div class="small text-body-secondary text-truncate subject-line" th:text="${n.subject}">subject</div>
           </td>
           <td><span th:replace="~{ui/layout :: group(${n.group}, ${row.groupName})}"></span></td>
@@ -61,15 +61,15 @@
           <td class="table-actions">
             <th:block th:if="${row.canEdit}">
               <button type="button" class="btn btn-sm btn-outline-secondary" title="Pause" hx-swap="none"
-                      th:if="${n.status.name() == 'ACTIVE'}" th:hx-post="@{/ui/notifications/{id}/pause(id=${n.id})}"><i class="bi bi-pause-fill"></i></button>
+                      th:if="${n.status.name() == 'ACTIVE'}" th:hx-post="@{/ui/messages/{id}/pause(id=${n.id})}"><i class="bi bi-pause-fill"></i></button>
               <button type="button" class="btn btn-sm btn-outline-success" title="Resume" hx-swap="none"
-                      th:if="${n.status.name() == 'PAUSED'}" th:hx-post="@{/ui/notifications/{id}/resume(id=${n.id})}"><i class="bi bi-play-fill"></i></button>
+                      th:if="${n.status.name() == 'PAUSED'}" th:hx-post="@{/ui/messages/{id}/resume(id=${n.id})}"><i class="bi bi-play-fill"></i></button>
               <button type="button" class="btn btn-sm btn-outline-secondary" title="Send now" hx-swap="none" data-confirm-label="Send now"
-                      th:hx-post="@{/ui/notifications/{id}/send(id=${n.id})}"
+                      th:hx-post="@{/ui/messages/{id}/send(id=${n.id})}"
                       th:hx-confirm="'Send ' + ${n.title} + ' now, through every enabled delivery? Its schedule is not changed.'"><i class="bi bi-send"></i></button>
-              <a class="btn btn-sm btn-outline-secondary" title="Edit" th:href="@{/ui/notifications/{id}/edit(id=${n.id})}"><i class="bi bi-pencil"></i></a>
+              <a class="btn btn-sm btn-outline-secondary" title="Edit" th:href="@{/ui/messages/{id}/edit(id=${n.id})}"><i class="bi bi-pencil"></i></a>
               <button type="button" class="btn btn-sm btn-outline-danger" title="Delete" hx-swap="none" data-confirm-label="Delete"
-                      th:hx-delete="@{/ui/notifications/{id}(id=${n.id})}"
+                      th:hx-delete="@{/ui/messages/{id}(id=${n.id})}"
                       th:hx-confirm="'Delete ' + ${n.title} + '? Its history is kept.'"><i class="bi bi-trash"></i></button>
             </th:block>
           </td>

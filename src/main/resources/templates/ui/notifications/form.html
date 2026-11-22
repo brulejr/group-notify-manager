@@ -6,8 +6,8 @@
   <div class="page-header">
     <div>
       <div class="small mb-1">
-        <a th:if="${existing != null}" th:href="@{/ui/notifications/{id}(id=${existing.id})}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Back to it</a>
-        <a th:if="${existing == null}" th:href="@{/ui/notifications}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Messages</a>
+        <a th:if="${existing != null}" th:href="@{/ui/messages/{id}(id=${existing.id})}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Back to it</a>
+        <a th:if="${existing == null}" th:href="@{/ui/messages}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Messages</a>
       </div>
       <h1 th:text="${existing == null} ? 'New message' : 'Edit ' + ${existing.title}">New message</h1>
       <p class="lead-text">What to say, when to send it, and where. Write the body in Markdown or the rich-text editor; each delivery gets it in the form it suits.</p>
@@ -16,7 +16,7 @@
 
   <!--/* The whole form is redrawn when it is refused, with each problem against its input. */-->
   <form th:fragment="form" id="notification-form" class="notification-form" novalidate hx-target="this" hx-swap="outerHTML" hx-disinherit="*"
-        th:hx-post="${existing == null} ? @{/ui/notifications} : @{/ui/notifications/{id}(id=${existing.id})}"
+        th:hx-post="${existing == null} ? @{/ui/messages} : @{/ui/messages/{id}(id=${existing.id})}"
         th:attr="data-next-index=${rows.size()}">
     <div th:replace="~{ui/layout :: toast(${toast})}"></div>
     <div class="row g-4">
@@ -127,7 +127,7 @@
                 <div class="invalid-feedback" th:text="${errors.get('zone')}"></div>
               </div>
             </div>
-            <div id="schedule-preview" class="mt-3" th:hx-get="@{/ui/notifications/schedule-preview}"
+            <div id="schedule-preview" class="mt-3" th:hx-get="@{/ui/messages/schedule-preview}"
                  hx-trigger="load, change from:#schedule-inputs, keyup changed delay:400ms from:#cron, keyup changed delay:400ms from:#pattern"
                  hx-include="#schedule-inputs" hx-target="this" hx-swap="innerHTML"></div>
           </div>
@@ -137,7 +137,7 @@
         <div class="card mb-4" th:fragment="deliveriesCard">
           <div class="card-header"><i class="bi bi-send"></i>Deliveries
             <!--/* The group's instances; fetched again when the group changes. */-->
-            <div id="instance-menu" class="ms-auto" th:hx-get="@{/ui/notifications/instances(list='delivery-list', prefix='deliveries')}" hx-trigger="change from:#group"
+            <div id="instance-menu" class="ms-auto" th:hx-get="@{/ui/messages/instances(list='delivery-list', prefix='deliveries')}" hx-trigger="change from:#group"
                  hx-include="#group" hx-target="this" hx-swap="innerHTML" hx-disinherit="*">
               <div th:replace="~{ui/notifications/parts :: instanceMenu}"></div>
             </div>
@@ -172,7 +172,7 @@
                 <button type="submit" class="btn btn-primary">
                   <span class="htmx-indicator spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
                   <i class="bi bi-check-lg me-1"></i><span th:text="${existing == null} ? 'Create message' : 'Save changes'">Save</span></button>
-                <a class="btn btn-outline-secondary" th:href="${existing == null} ? @{/ui/notifications} : @{/ui/notifications/{id}(id=${existing.id})}">Cancel</a>
+                <a class="btn btn-outline-secondary" th:href="${existing == null} ? @{/ui/messages} : @{/ui/messages/{id}(id=${existing.id})}">Cancel</a>
               </div>
             </div>
           </div>

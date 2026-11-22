@@ -58,7 +58,7 @@ import java.util.UUID
  * group rules apply: a notification outside the user's groups is not found.
  */
 @Controller
-@RequestMapping("/ui/notifications")
+@RequestMapping("/ui/messages")
 class NotificationPageController(
     private val notifications: NotificationService,
     private val deliveries: DeliveryService,
@@ -282,7 +282,7 @@ class NotificationPageController(
     ): String {
         val result = notifications.delete(id, user)
         if (result is NotificationResult.Saved && redirect) {
-            Htmx.redirect(response, "/ui/notifications")
+            Htmx.redirect(response, "/ui/messages")
             return "ui/layout :: toastOnly"
         }
         return act(result, "Deleted", model, response)
@@ -300,7 +300,7 @@ class NotificationPageController(
         }
         return when (result) {
             is NotificationResult.Saved -> {
-                Htmx.redirect(response, "/ui/notifications/${result.notification.id}?saved=${if (existing == null) "created" else "updated"}")
+                Htmx.redirect(response, "/ui/messages/${result.notification.id}?saved=${if (existing == null) "created" else "updated"}")
                 "ui/layout :: toastOnly"
             }
             is NotificationResult.Invalid -> {

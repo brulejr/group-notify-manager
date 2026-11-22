@@ -4,8 +4,9 @@ Served under `/ui`: server-rendered with Thymeleaf, made interactive with htmx, 
 with Bootstrap in light and dark. Every library is served from the jar, so it works
 without internet.
 
-The console calls them **messages**: what the code and the REST API call notifications
-(`/ui/notifications`, `/api/notifications`), a word that said less than it seemed to.
+The console and the REST API call them **messages** (`/ui/messages`, `/api/messages`);
+inside the code they are still notifications. The old `/ui/notifications…` and
+`/api/notifications…` paths redirect (308, keeping the method) to the new ones.
 
 | Page | |
 | --- | --- |

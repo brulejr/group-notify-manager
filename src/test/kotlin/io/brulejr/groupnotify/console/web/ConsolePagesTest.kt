@@ -75,18 +75,18 @@ class ConsolePagesTest : WebTest() {
     fun `the menu has one Messages entry, which stays lit in the editor`() {
         val menu = { path: String -> mvc.perform(get(path).alice()).andReturn().response.contentAsString.substringBefore("console-content") }
 
-        val list = menu("/ui/notifications")
+        val list = menu("/ui/messages")
         assertTrue(">Messages<" in list)
         assertTrue("All notifications" !in list && "New notification" !in list)
         // The editor has no menu entry of its own: Messages stays lit.
-        assertTrue("href=\"/ui/notifications\" class=\"nav-link active\"" in menu("/ui/notifications/new"))
+        assertTrue("href=\"/ui/messages\" class=\"nav-link active\"" in menu("/ui/messages/new"))
     }
 
     @Test
     fun `the dashboard's New menu offers a message and an event, to those who may create them`() {
         val page = mvc.perform(get("/ui").alice()).andReturn().response.contentAsString
 
-        assertTrue("href=\"/ui/notifications/new\"" in page && "href=\"/ui/events/new\"" in page)
+        assertTrue("href=\"/ui/messages/new\"" in page && "href=\"/ui/events/new\"" in page)
         assertTrue(">New message<" !in page)
         // In no messaging group, not an admin: nothing to create.
         val outsider = mvc.perform(get("/ui").signedIn("dave", "homelab_users")).andReturn().response.contentAsString
@@ -98,7 +98,7 @@ class ConsolePagesTest : WebTest() {
         mvc.perform(get("/ui/groups").alice())
             .andExpect(status().isOk)
             .andExpect(content().string(containsString("/ui/history?group=notify_club")))
-            .andExpect(content().string(not(containsString("/ui/notifications/new"))))
+            .andExpect(content().string(not(containsString("/ui/messages/new"))))
     }
 
     @Test
@@ -114,24 +114,24 @@ class ConsolePagesTest : WebTest() {
         val pages = mapOf(
             "/ui" to "Coming up",
             "/ui/overview" to "Net night",
-            "/ui/notifications" to "Net night",
-            "/ui/notifications/rows?status=ACTIVE" to "Net night",
-            "/ui/notifications/new" to "New message",
-            "/ui/notifications/$recurring" to "<strong>146.52</strong>",
-            "/ui/notifications/$once" to "One-off",
-            "/ui/notifications/$recurring/body" to "Next runs",
-            "/ui/notifications/$recurring/edit" to "Save changes",
-            "/ui/notifications/$once/edit" to "data-format=\"HTML\"",
-            "/ui/notifications/$recurring/copy" to "Net night (copy)",
-            "/ui/notifications/delivery?instance=${log!!.id}&index=3" to "deliveries[3].overrides.body",
-            "/ui/notifications/instances?group=notify_club" to "Club Discord",
+            "/ui/messages" to "Net night",
+            "/ui/messages/rows?status=ACTIVE" to "Net night",
+            "/ui/messages/new" to "New message",
+            "/ui/messages/$recurring" to "<strong>146.52</strong>",
+            "/ui/messages/$once" to "One-off",
+            "/ui/messages/$recurring/body" to "Next runs",
+            "/ui/messages/$recurring/edit" to "Save changes",
+            "/ui/messages/$once/edit" to "data-format=\"HTML\"",
+            "/ui/messages/$recurring/copy" to "Net night (copy)",
+            "/ui/messages/delivery?instance=${log!!.id}&index=3" to "deliveries[3].overrides.body",
+            "/ui/messages/instances?group=notify_club" to "Club Discord",
             "/ui/instances/list" to "Club log",
-            "/ui/notifications/schedule-preview?kind=RECURRING&cron=0 9 * * MON&zone=America/New_York" to "Next runs",
-            "/ui/notifications/schedule-preview?kind=RECURRING&cron=nonsense" to "not a valid cron",
-            "/ui/notifications/schedule-preview?kind=PATTERN&pattern=every other month on the 3rd tuesday at 6pm&zone=America/New_York" to "Every other month on the 3rd Tuesday at 6:00 PM",
-            "/ui/notifications/schedule-preview?kind=PATTERN&pattern=every fortnight" to "“every fortnight” is not understood",
-            "/ui/notifications/$pattern" to "Every other month on the 3rd Tuesday",
-            "/ui/notifications/$pattern/edit" to "every 2 months on the 3rd tuesday at 18:00 starting",
+            "/ui/messages/schedule-preview?kind=RECURRING&cron=0 9 * * MON&zone=America/New_York" to "Next runs",
+            "/ui/messages/schedule-preview?kind=RECURRING&cron=nonsense" to "not a valid cron",
+            "/ui/messages/schedule-preview?kind=PATTERN&pattern=every other month on the 3rd tuesday at 6pm&zone=America/New_York" to "Every other month on the 3rd Tuesday at 6:00 PM",
+            "/ui/messages/schedule-preview?kind=PATTERN&pattern=every fortnight" to "“every fortnight” is not understood",
+            "/ui/messages/$pattern" to "Every other month on the 3rd Tuesday",
+            "/ui/messages/$pattern/edit" to "every 2 months on the 3rd tuesday at 18:00 starting",
             "/ui/history" to "Created",
             "/ui/history/rows?type=changes" to "Net night",
             "/ui/history?notificationId=$recurring" to "Showing",
@@ -155,7 +155,7 @@ class ConsolePagesTest : WebTest() {
     fun `a saved secret is never sent to the browser`() {
         val id = seed()
 
-        mvc.perform(get("/ui/notifications/$id/edit").alice()).andExpect(content().string(not(containsString("webhooks/7/tok"))))
+        mvc.perform(get("/ui/messages/$id/edit").alice()).andExpect(content().string(not(containsString("webhooks/7/tok"))))
         mvc.perform(get("/ui/instances/list").alice()).andExpect(content().string(not(containsString("webhooks/7/tok"))))
         mvc.perform(get("/ui/instances/${discord!!.id}/edit").root())
             .andExpect(content().string(not(containsString("webhooks/7/tok"))))
@@ -224,15 +224,15 @@ class ConsolePagesTest : WebTest() {
     fun `another group's notification is not found, an admin's view shows everything`() {
         val id = seed()
 
-        mvc.perform(get("/ui/notifications/$id").bob()).andExpect(status().isNotFound)
-        mvc.perform(get("/ui/notifications/$id").root()).andExpect(status().isOk)
+        mvc.perform(get("/ui/messages/$id").bob()).andExpect(status().isNotFound)
+        mvc.perform(get("/ui/messages/$id").root()).andExpect(status().isOk)
             .andExpect(content().string(containsString("Health")))
     }
 
     @Test
     fun `saving the form creates the notification and sends the browser to it`() {
         mvc.perform(
-            post("/ui/notifications").alice().with(csrf())
+            post("/ui/messages").alice().with(csrf())
                 .param("group", "notify_club").param("title", "Swap meet").param("subject", "Swap meet Saturday")
                 .param("format", "MARKDOWN").param("body", "Tables at 8")
                 .param("kind", "ONCE").param("runAt", LocalDateTime.now().plusDays(2).withNano(0).toString().take(16)).param("zone", "America/New_York")
@@ -240,7 +240,7 @@ class ConsolePagesTest : WebTest() {
                 .param("deliveries[5].enabled", "false").param("deliveries[5].enabled", "true"),
         )
             .andExpect(status().isOk)
-            .andExpect(header().string("HX-Redirect", startsWith("/ui/notifications/")))
+            .andExpect(header().string("HX-Redirect", startsWith("/ui/messages/")))
 
         val saved = store.list(null).single()
         assertEquals("Swap meet", saved.title)
@@ -252,7 +252,7 @@ class ConsolePagesTest : WebTest() {
         // Rotating it on every request left each page's token stale as soon as its own
         // fragments loaded.
         val cookie = jakarta.servlet.http.Cookie(SecurityConfig.CSRF_COOKIE, "c0ffee")
-        val response = mvc.perform(get("/ui/notifications/new").alice().cookie(cookie)).andExpect(status().isOk).andReturn().response
+        val response = mvc.perform(get("/ui/messages/new").alice().cookie(cookie)).andExpect(status().isOk).andReturn().response
         assertEquals(emptyList(), response.cookies.filter { it.name == SecurityConfig.CSRF_COOKIE }.map { it.value })
     }
 
@@ -273,7 +273,7 @@ class ConsolePagesTest : WebTest() {
 
     @Test
     fun `a stale CSRF token is reported as such, so the console can ask for a reload`() {
-        mvc.perform(post("/ui/notifications").alice().header("X-XSRF-TOKEN", "stale").param("title", "Swap meet"))
+        mvc.perform(post("/ui/messages").alice().header("X-XSRF-TOKEN", "stale").param("title", "Swap meet"))
             .andExpect(status().isForbidden)
             .andExpect(header().string(SecurityConfig.DENIED_HEADER, "csrf"))
     }
@@ -281,7 +281,7 @@ class ConsolePagesTest : WebTest() {
     @Test
     fun `a refused form is redrawn with each problem against its input`() {
         mvc.perform(
-            post("/ui/notifications").alice().with(csrf())
+            post("/ui/messages").alice().with(csrf())
                 .param("group", "notify_club").param("title", "").param("kind", "RECURRING").param("cron", "0 25 * * *")
                 .param("deliveries[0].instance", provision().id.toString()).param("deliveries[0].overrides.body", "everything"),
         )
@@ -295,14 +295,14 @@ class ConsolePagesTest : WebTest() {
 
     @Test
     fun `a form without its CSRF token is refused`() {
-        mvc.perform(post("/ui/notifications").alice().param("title", "x")).andExpect(status().isForbidden)
+        mvc.perform(post("/ui/messages").alice().param("title", "x")).andExpect(status().isForbidden)
     }
 
     @Test
     fun `pausing from the console says so and tells the lists to reload`() {
         val id = seed()
 
-        mvc.perform(post("/ui/notifications/$id/pause").alice().with(csrf()))
+        mvc.perform(post("/ui/messages/$id/pause").alice().with(csrf()))
             .andExpect(header().string("HX-Trigger", "notificationsChanged"))
             .andExpect(content().string(containsString("Paused Net night")))
     }
@@ -320,10 +320,10 @@ class ConsolePagesTest : WebTest() {
         )
         val id = (notifications.create(draft, alice) as NotificationResult.Saved).notification.id
 
-        mvc.perform(post("/ui/notifications/$id/send").alice().with(csrf()))
+        mvc.perform(post("/ui/messages/$id/send").alice().with(csrf()))
             .andExpect(header().string("HX-Trigger", "notificationsChanged"))
             .andExpect(content().string(containsString("Sent through 2 deliveries")))
-        mvc.perform(get("/ui/notifications/$id").alice()).andExpect(content().string(containsString("bi-hand-index")))
+        mvc.perform(get("/ui/messages/$id").alice()).andExpect(content().string(containsString("bi-hand-index")))
     }
 
     @Test

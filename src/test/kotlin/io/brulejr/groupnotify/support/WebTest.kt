@@ -59,7 +59,10 @@ abstract class WebTest {
 
     @BeforeEach
     fun setUpMvc() {
-        mvc = MockMvcBuilders.webAppContextSetup(context).apply<DefaultMockMvcBuilder>(springSecurity()).build()
+        // Servlet filters the application registers itself, which MockMvc does not pick up.
+        mvc = MockMvcBuilders.webAppContextSetup(context).apply<DefaultMockMvcBuilder>(springSecurity())
+            .addFilters<DefaultMockMvcBuilder>(context.getBean(io.brulejr.groupnotify.notification.web.LegacyPathRedirect::class.java))
+            .build()
         // The context, and its in-memory stores, outlive each test.
         store.list(null).forEach { store.delete(it.id) }
         eventStore.list(null).forEach { eventStore.delete(it.id) }

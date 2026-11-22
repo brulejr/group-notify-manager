@@ -4,11 +4,11 @@
 <body>
 <main class="console-content">
   <div th:replace="~{ui/layout :: toast(${toast})}"></div>
-  <div th:fragment="body" id="detail-body" th:hx-get="@{/ui/notifications/{id}/body(id=${n.id})}" hx-trigger="notificationsChanged from:body"
+  <div th:fragment="body" id="detail-body" th:hx-get="@{/ui/messages/{id}/body(id=${n.id})}" hx-trigger="notificationsChanged from:body"
        hx-target="this" hx-swap="outerHTML" hx-disinherit="*">
     <div class="page-header">
       <div class="min-w-0">
-        <div class="small mb-1"><a th:href="@{/ui/notifications}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Messages</a></div>
+        <div class="small mb-1"><a th:href="@{/ui/messages}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Messages</a></div>
         <h1 class="d-flex flex-wrap align-items-center gap-2">
           <span th:text="${n.title}">Title</span>
           <span th:replace="~{ui/layout :: status(${n.status})}"></span>
@@ -21,22 +21,22 @@
       </div>
       <div class="actions" th:if="${canEdit}">
         <button type="button" class="btn btn-outline-secondary" hx-swap="none" data-confirm-label="Send now"
-                th:hx-post="@{/ui/notifications/{id}/send(id=${n.id})}"
+                th:hx-post="@{/ui/messages/{id}/send(id=${n.id})}"
                 th:hx-confirm="'Send ' + ${n.title} + ' now, through every enabled delivery? Its schedule is not changed.'">
           <i class="bi bi-send me-1"></i>Send now</button>
         <button type="button" class="btn btn-outline-warning" hx-swap="none" th:if="${n.status.name() == 'ACTIVE'}"
-                th:hx-post="@{/ui/notifications/{id}/pause(id=${n.id})}"><i class="bi bi-pause-fill me-1"></i>Pause</button>
+                th:hx-post="@{/ui/messages/{id}/pause(id=${n.id})}"><i class="bi bi-pause-fill me-1"></i>Pause</button>
         <button type="button" class="btn btn-outline-success" hx-swap="none" th:if="${n.status.name() == 'PAUSED'}"
-                th:hx-post="@{/ui/notifications/{id}/resume(id=${n.id})}"><i class="bi bi-play-fill me-1"></i>Resume</button>
-        <a class="btn btn-primary" th:href="@{/ui/notifications/{id}/edit(id=${n.id})}"><i class="bi bi-pencil me-1"></i>Edit</a>
+                th:hx-post="@{/ui/messages/{id}/resume(id=${n.id})}"><i class="bi bi-play-fill me-1"></i>Resume</button>
+        <a class="btn btn-primary" th:href="@{/ui/messages/{id}/edit(id=${n.id})}"><i class="bi bi-pencil me-1"></i>Edit</a>
         <div class="dropdown">
           <button class="btn btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-label="More"><i class="bi bi-three-dots"></i></button>
           <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" th:href="@{/ui/notifications/{id}/copy(id=${n.id})}"><i class="bi bi-copy me-2"></i>Copy to a new message</a></li>
+            <li><a class="dropdown-item" th:href="@{/ui/messages/{id}/copy(id=${n.id})}"><i class="bi bi-copy me-2"></i>Copy to a new message</a></li>
             <li><a class="dropdown-item" th:href="@{/ui/history(notificationId=${n.id})}"><i class="bi bi-clock-history me-2"></i>Full history</a></li>
             <li><hr class="dropdown-divider"></li>
             <li><button type="button" class="dropdown-item text-danger" hx-swap="none" data-confirm-label="Delete"
-                        th:hx-delete="@{/ui/notifications/{id}(id=${n.id}, redirect=true)}"
+                        th:hx-delete="@{/ui/messages/{id}(id=${n.id}, redirect=true)}"
                         th:hx-confirm="'Delete ' + ${n.title} + '? Its history is kept.'"><i class="bi bi-trash me-2"></i>Delete</button></li>
           </ul>
         </div>
@@ -129,7 +129,7 @@
               </div>
               <button type="button" class="btn btn-sm btn-outline-secondary" th:if="${canEdit}" title="Send through this delivery only"
                       hx-swap="none" data-confirm-label="Send test"
-                      th:hx-post="@{/ui/notifications/{id}/send(id=${n.id}, deliveryId=${d.id})}"
+                      th:hx-post="@{/ui/messages/{id}/send(id=${n.id}, deliveryId=${d.id})}"
                       th:hx-confirm="'Send ' + ${n.title} + ' now through ' + ${d.name} + ' (' + ${d.pluginName} + ', ' + ${d.summary} + ') only?'">Test</button>
             </li>
           </ul>

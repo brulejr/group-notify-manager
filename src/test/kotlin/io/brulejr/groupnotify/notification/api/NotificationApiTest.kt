@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delet
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import tools.jackson.databind.json.JsonMapper
@@ -46,15 +47,29 @@ class NotificationApiTest : WebTest() {
     """.trimIndent()
 
     private fun create(): Map<*, *> {
-        val response = mvc.perform(post("/api/notifications").alice().contentType(MediaType.APPLICATION_JSON).content(body()))
+        val response = mvc.perform(post("/api/messages").alice().contentType(MediaType.APPLICATION_JSON).content(body()))
             .andExpect(status().isCreated)
             .andReturn().response.contentAsString
         return json.readValue(response, Map::class.java)
     }
 
     @Test
+    fun `the old notifications paths send their callers to the messages ones, keeping method and query`() {
+        mvc.perform(get("/api/notifications?group=notify_club").alice())
+            .andExpect(status().isPermanentRedirect)
+            .andExpect(header().string("Location", "/api/messages?group=notify_club"))
+        mvc.perform(put("/api/notifications/42").alice().header("X-Requested-With", "test").contentType(MediaType.APPLICATION_JSON).content("{}"))
+            .andExpect(status().isPermanentRedirect)
+            .andExpect(header().string("Location", "/api/messages/42"))
+        mvc.perform(get("/ui/notifications/new").alice())
+            .andExpect(header().string("Location", "/ui/messages/new"))
+        mvc.perform(get("/api/notificationsfoo").alice()).andExpect(status().isNotFound)
+        mvc.perform(get("/ui/messages").alice()).andExpect(status().isOk)
+    }
+
+    @Test
     fun `without Authelia's headers nothing is answered`() {
-        mvc.perform(get("/api/notifications")).andExpect(status().isUnauthorized)
+        mvc.perform(get("/api/messages")).andExpect(status().isUnauthorized)
         mvc.perform(get("/ui")).andExpect(status().isUnauthorized)
     }
 
@@ -71,10 +86,10 @@ class NotificationApiTest : WebTest() {
     fun `a group's notifications are seen by its members and admins only`() {
         val id = create()["id"]
 
-        mvc.perform(get("/api/notifications").alice()).andExpect(jsonPath("$", hasSize<Any>(1)))
-        mvc.perform(get("/api/notifications").bob()).andExpect(jsonPath("$", hasSize<Any>(0)))
-        mvc.perform(get("/api/notifications/$id").bob()).andExpect(status().isNotFound)
-        mvc.perform(get("/api/notifications/$id").root()).andExpect(status().isOk)
+        mvc.perform(get("/api/messages").alice()).andExpect(jsonPath("$", hasSize<Any>(1)))
+        mvc.perform(get("/api/messages").bob()).andExpect(jsonPath("$", hasSize<Any>(0)))
+        mvc.perform(get("/api/messages/$id").bob()).andExpect(status().isNotFound)
+        mvc.perform(get("/api/messages/$id").root()).andExpect(status().isOk)
         mvc.perform(get("/api/audit").bob()).andExpect(jsonPath("$", hasSize<Any>(0)))
         mvc.perform(get("/api/audit").alice()).andExpect(jsonPath("$[0].type").value("CREATED"))
     }
@@ -83,11 +98,11 @@ class NotificationApiTest : WebTest() {
     fun `a notification names its instance and only overrides what the plugin allows`() {
         val created = create()
 
-        mvc.perform(get("/api/notifications/${created["id"]}").alice())
+        mvc.perform(get("/api/messages/${created["id"]}").alice())
             .andExpect(jsonPath("$.deliveries[0].instanceName").value("Club Discord"))
             .andExpect(jsonPath("$.deliveries[0].summary").value("webhook 42"))
         mvc.perform(
-            put("/api/notifications/${created["id"]}").alice().contentType(MediaType.APPLICATION_JSON)
+            put("/api/messages/${created["id"]}").alice().contentType(MediaType.APPLICATION_JSON)
                 .content(body(overrides = """{"mention": "@everyone", "webhookUrl": "https://discord.com/api/webhooks/1/evil"}""")),
         )
             .andExpect(status().isOk)
@@ -140,7 +155,7 @@ class NotificationApiTest : WebTest() {
             """{"kind": "PATTERN", "pattern": "every month on the last saturday at 9am", "zone": "America/New_York"}""",
         )
 
-        mvc.perform(post("/api/notifications").alice().contentType(MediaType.APPLICATION_JSON).content(pattern))
+        mvc.perform(post("/api/messages").alice().contentType(MediaType.APPLICATION_JSON).content(pattern))
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.schedule.pattern").value(org.hamcrest.Matchers.startsWith("every month on the last saturday at 09:00 starting ")))
             .andExpect(jsonPath("$.schedule.description").value(org.hamcrest.Matchers.startsWith("Every month on the last Saturday at 9:00 AM")))
@@ -148,7 +163,7 @@ class NotificationApiTest : WebTest() {
 
     @Test
     fun `a refused notification says what is wrong with each field`() {
-        mvc.perform(post("/api/notifications").bob().contentType(MediaType.APPLICATION_JSON).content(body()))
+        mvc.perform(post("/api/messages").bob().contentType(MediaType.APPLICATION_JSON).content(body()))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.problems[0].field").value("group"))
     }
@@ -157,12 +172,12 @@ class NotificationApiTest : WebTest() {
     fun `a bodyless call needs X-Requested-With, which no other site can send`() {
         val id = create()["id"]
 
-        mvc.perform(post("/api/notifications/$id/pause").alice()).andExpect(status().isForbidden)
-        mvc.perform(post("/api/notifications/$id/pause").alice().header("X-Requested-With", "test"))
+        mvc.perform(post("/api/messages/$id/pause").alice()).andExpect(status().isForbidden)
+        mvc.perform(post("/api/messages/$id/pause").alice().header("X-Requested-With", "test"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value("PAUSED"))
-        mvc.perform(post("/api/notifications/$id/resume").bob().header("X-Requested-With", "test")).andExpect(status().isNotFound)
-        mvc.perform(delete("/api/notifications/$id").alice().header("X-Requested-With", "test")).andExpect(status().isNoContent)
+        mvc.perform(post("/api/messages/$id/resume").bob().header("X-Requested-With", "test")).andExpect(status().isNotFound)
+        mvc.perform(delete("/api/messages/$id").alice().header("X-Requested-With", "test")).andExpect(status().isNoContent)
     }
 
     @Test

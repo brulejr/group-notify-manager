@@ -9,7 +9,7 @@ variables:
   - name: remote_groups
     value: homelab_admins,notify_club
     description: "Sent as Remote-Groups"
-  - name: notification_id
+  - name: message_id
     value: ""
     description: "Copy the id Create Notification returns here"
   - name: event_id

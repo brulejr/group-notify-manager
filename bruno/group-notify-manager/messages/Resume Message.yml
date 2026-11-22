@@ -1,11 +1,11 @@
 info:
-  name: Pause Notification
+  name: Resume Message
   type: http
-  seq: 6
+  seq: 7
 
 http:
   method: POST
-  url: "{{notify_url}}/api/notifications/{{notification_id}}/pause"
+  url: "{{notify_url}}/api/messages/{{message_id}}/resume"
   headers:
     - name: Remote-User
       value: "{{remote_user}}"

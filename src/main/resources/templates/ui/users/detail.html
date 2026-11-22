@@ -59,7 +59,7 @@
             <span th:replace="~{ui/layout :: event(${h.type})}"></span>
             <span class="flex-grow-1 min-w-0">
               <a th:if="${h.notificationId != null and h.type.name() != 'DELETED'}" class="fw-medium text-decoration-none"
-                 th:href="@{/ui/notifications/{id}(id=${h.notificationId})}" th:text="${h.notificationTitle}">title</a>
+                 th:href="@{/ui/messages/{id}(id=${h.notificationId})}" th:text="${h.notificationTitle}">title</a>
               <a th:if="${h.eventId != null and h.type.name() != 'DELETED'}" class="fw-medium text-decoration-none"
                  th:href="@{/ui/events/{id}(id=${h.eventId})}"><i class="bi bi-calendar-event me-1"></i><span th:text="${h.notificationTitle}">title</span></a>
               <span th:unless="${(h.notificationId != null or h.eventId != null) and h.type.name() != 'DELETED'}" class="fw-medium" th:text="${h.notificationTitle}">title</span>

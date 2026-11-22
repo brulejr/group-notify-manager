@@ -1,11 +1,11 @@
 info:
-  name: Resume Notification
+  name: Send Now
   type: http
-  seq: 7
+  seq: 8
 
 http:
   method: POST
-  url: "{{notify_url}}/api/notifications/{{notification_id}}/resume"
+  url: "{{notify_url}}/api/messages/{{message_id}}/send"
   headers:
     - name: Remote-User
       value: "{{remote_user}}"

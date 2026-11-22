@@ -28,7 +28,7 @@ class DispatchController(private val dispatch: DispatchService) {
     data class DeliveryReportView(val deliveryId: UUID, val instance: UUID, val instanceName: String, val summary: String, val delivered: Boolean, val detail: String, val attempts: Int)
 
     /** Sends a notification now, or only one of its deliveries; its schedule is left alone. */
-    @PostMapping("/api/notifications/{id}/send")
+    @PostMapping("/api/messages/{id}/send")
     fun send(user: NotifyUser, @PathVariable id: UUID, @RequestParam(required = false) deliveryId: UUID?): ResponseEntity<Any> =
         respond(dispatch.sendNow(id, user, deliveryId))
 

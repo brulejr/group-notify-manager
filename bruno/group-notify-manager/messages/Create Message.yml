@@ -1,11 +1,11 @@
 info:
-  name: Create Notification
+  name: Create Message
   type: http
   seq: 2
 
 http:
   method: POST
-  url: "{{notify_url}}/api/notifications"
+  url: "{{notify_url}}/api/messages"
   headers:
     - name: Remote-User
       value: "{{remote_user}}"

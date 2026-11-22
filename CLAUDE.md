@@ -82,3 +82,6 @@ docker compose up -d     # dev services via COMPOSE_FILE in .env: PostgreSQL :54
   their own go in a template that is never rendered as a page (`notifications/parts.html`).
   `ConsolePagesTest` renders every page; extend it with each new one.
 - Every `.kt` file under `src/` opens with the MIT license header block comment.
+- The console and the REST API say **messages** (`/ui/messages`, `/api/messages`); the code,
+  packages and templates (`ui/notifications/...`) still say notification. `LegacyPathRedirect`
+  answers the old `/ui/notifications…` and `/api/notifications…` paths with a 308.

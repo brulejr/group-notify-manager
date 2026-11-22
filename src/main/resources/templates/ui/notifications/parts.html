@@ -40,7 +40,7 @@
       <i class="bi bi-plus-lg me-1"></i>Add delivery</button>
     <ul class="dropdown-menu dropdown-menu-end">
       <li th:each="c : ${instances}">
-        <button type="button" class="dropdown-item d-flex align-items-center gap-2" th:hx-get="@{/ui/notifications/delivery}"
+        <button type="button" class="dropdown-item d-flex align-items-center gap-2" th:hx-get="@{/ui/messages/delivery}"
                 th:attr="hx-vals='js:{instance: &quot;' + ${c.id} + '&quot;, index: notifyNextIn(&quot;' + ${menuList} + '&quot;), prefix: &quot;' + ${menuPrefix} + '&quot;}',hx-target='#' + ${menuList}"
                 hx-swap="beforeend">
           <i class="bi" th:classappend="'bi-' + ${c.icon}"></i>

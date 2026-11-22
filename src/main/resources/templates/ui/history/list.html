@@ -13,7 +13,7 @@
 
   <div class="alert alert-info d-flex align-items-center gap-2" th:if="${filteredNotification != null}">
     <i class="bi bi-funnel"></i>
-    <span>Showing <a th:href="@{/ui/notifications/{id}(id=${filteredNotification.id})}" th:text="${filteredNotification.title}">x</a> only.</span>
+    <span>Showing <a th:href="@{/ui/messages/{id}(id=${filteredNotification.id})}" th:text="${filteredNotification.title}">x</a> only.</span>
     <a th:href="@{/ui/history}" class="ms-auto">Show everything</a>
   </div>
 
@@ -44,7 +44,7 @@
           <td><span th:replace="~{ui/layout :: event(${e.type})}"></span></td>
           <td>
             <a th:if="${e.notificationId != null and e.type.name() != 'DELETED'}" class="text-decoration-none fw-medium"
-               th:href="@{/ui/notifications/{id}(id=${e.notificationId})}" th:text="${e.notificationTitle}">title</a>
+               th:href="@{/ui/messages/{id}(id=${e.notificationId})}" th:text="${e.notificationTitle}">title</a>
             <a th:if="${e.eventId != null and e.type.name() != 'DELETED'}" class="text-decoration-none fw-medium"
                th:href="@{/ui/events/{id}(id=${e.eventId})}"><i class="bi bi-calendar-event me-1"></i><span th:text="${e.notificationTitle}">title</span></a>
             <span th:unless="${(e.notificationId != null or e.eventId != null) and e.type.name() != 'DELETED'}" th:text="${e.notificationTitle}">title</span>

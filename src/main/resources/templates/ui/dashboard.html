@@ -14,7 +14,7 @@
         <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
           <i class="bi bi-plus-lg me-1"></i>New</button>
         <ul class="dropdown-menu dropdown-menu-end">
-          <li><a class="dropdown-item" th:href="@{/ui/notifications/new}"><i class="bi bi-envelope me-2"></i>Message
+          <li><a class="dropdown-item" th:href="@{/ui/messages/new}"><i class="bi bi-envelope me-2"></i>Message
             <span class="d-block small text-body-secondary ms-4">Sent once or on a schedule</span></a></li>
           <li><a class="dropdown-item" th:href="@{/ui/events/new}"><i class="bi bi-calendar-event me-2"></i>Event
             <span class="d-block small text-body-secondary ms-4">With reminders around each occurrence</span></a></li>
@@ -48,7 +48,7 @@
       <div class="col-xl-7">
         <div class="card h-100">
           <div class="card-header"><i class="bi bi-calendar-event"></i>Coming up
-            <span class="ms-auto small fw-normal"><a th:href="@{/ui/notifications}">Messages</a> · <a th:href="@{/ui/events}">Events</a></span></div>
+            <span class="ms-auto small fw-normal"><a th:href="@{/ui/messages}">Messages</a> · <a th:href="@{/ui/events}">Events</a></span></div>
           <!--/* What is about to be sent: notifications' next runs and events' next reminders, together. */-->
           <div class="list-group list-group-flush">
             <a class="list-group-item list-group-item-action upcoming-item" th:each="u : ${o.upcoming}" th:href="@{${u.href}}">
@@ -113,7 +113,7 @@
             <li class="list-group-item" th:each="e : ${o.recent}">
               <span th:replace="~{ui/layout :: event(${e.type})}"></span>
               <span class="min-w-0 flex-grow-1">
-                <a th:if="${e.notificationId != null and e.type.name() != 'DELETED'}" th:href="@{/ui/notifications/{id}(id=${e.notificationId})}"
+                <a th:if="${e.notificationId != null and e.type.name() != 'DELETED'}" th:href="@{/ui/messages/{id}(id=${e.notificationId})}"
                    class="fw-medium text-decoration-none" th:text="${e.notificationTitle}">Title</a>
                 <a th:if="${e.eventId != null and e.type.name() != 'DELETED'}" th:href="@{/ui/events/{id}(id=${e.eventId})}"
                    class="fw-medium text-decoration-none"><i class="bi bi-calendar-event me-1"></i><span th:text="${e.notificationTitle}">Title</span></a>

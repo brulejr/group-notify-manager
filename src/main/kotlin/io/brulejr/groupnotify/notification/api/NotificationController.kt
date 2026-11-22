@@ -34,7 +34,7 @@ import java.util.UUID
  * not found, rather than forbidden; one they can see but not change is forbidden.
  */
 @RestController
-@RequestMapping("/api/notifications")
+@RequestMapping("/api/messages")
 class NotificationController(
     private val notifications: NotificationService,
     private val instances: InstanceService,

@@ -18,11 +18,11 @@ Bruno collection in `bruno/group-notify-manager` covers every call.
 | | |
 | --- | --- |
 | `GET /api/me` | Who the application thinks you are |
-| `GET, POST /api/notifications` | List (`q`, `group`, `status`), create |
-| `GET, PUT, DELETE /api/notifications/{id}` | |
-| `GET /api/notifications/{id}/upcoming?count=5` | Next runs |
-| `POST /api/notifications/{id}/pause`, `/resume` | |
-| `POST /api/notifications/{id}/send[?deliveryId=]` | Send now; reports each delivery |
+| `GET, POST /api/messages` | List (`q`, `group`, `status`), create |
+| `GET, PUT, DELETE /api/messages/{id}` | |
+| `GET /api/messages/{id}/upcoming?count=5` | Next runs |
+| `POST /api/messages/{id}/pause`, `/resume` | |
+| `POST /api/messages/{id}/send[?deliveryId=]` | Send now; reports each delivery |
 | `GET /api/audit` | History: `group`, `notificationId`, `type` (repeatable), `since`, `before`, `limit` |
 | `GET /api/plugins[/{id}]` | Plugins, their fields (and which are overridable) and readiness |
 | `GET, POST /api/events` | Events you may see (`group`, `q`), create |

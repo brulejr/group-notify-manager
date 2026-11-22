@@ -29,6 +29,7 @@ data class InstanceView(
     val createdAt: Instant,
     val updatedBy: String,
     val updatedAt: Instant,
+    val alerts: Boolean,
 ) {
     companion object {
         fun of(instance: PluginInstance, instances: InstanceService, overridable: Set<String>) = InstanceView(
@@ -43,6 +44,7 @@ data class InstanceView(
             createdAt = instance.createdAt,
             updatedBy = instance.updatedBy,
             updatedAt = instance.updatedAt,
+            alerts = instance.alerts,
         )
     }
 }

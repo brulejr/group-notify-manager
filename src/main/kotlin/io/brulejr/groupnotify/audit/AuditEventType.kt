@@ -27,6 +27,12 @@ enum class AuditEventType(val label: String, val level: String) {
 
     /** A one-off has run, or a recurring one has passed its end date. */
     COMPLETED("Completed", "secondary"),
+
+    /** A failure or skip was posted to the group's alerts instances. */
+    ALERTED("Alerted", "warning"),
+
+    /** An instance that had failed sent again, and the alerts instances were told. */
+    RECOVERED("Recovered", "success"),
     ;
 
     val delivery get() = this == SENT || this == FAILED

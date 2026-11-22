@@ -53,6 +53,7 @@ class InMemoryAuditStore(private val capacity: Int = 10_000) : AuditPort {
             (query.notificationId == null || event.notificationId == query.notificationId) &&
             (query.eventId == null || event.eventId == query.eventId) &&
             (query.actor == null || event.actor == query.actor) &&
+            (query.instanceId == null || event.instanceId == query.instanceId) &&
             (query.types == null || event.type in query.types) &&
             (query.since == null || event.occurredAt >= query.since)
 }

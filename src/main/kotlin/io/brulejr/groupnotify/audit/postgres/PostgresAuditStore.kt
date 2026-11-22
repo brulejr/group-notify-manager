@@ -28,9 +28,9 @@ class PostgresAuditStore(private val jdbc: JdbcClient) : AuditPort {
         val id = jdbc.sql(
             """
             INSERT INTO audit_events (occurred_at, type, actor, notification_id, notification_title, group_name,
-                                      delivery_id, plugin, target, trigger, detail, reference, attempts, event_id)
+                                      delivery_id, plugin, target, trigger, detail, reference, attempts, event_id, instance_id)
             VALUES (:occurredAt, :type, :actor, :notificationId, :title, :group,
-                    :deliveryId, :plugin, :target, :trigger, :detail, :reference, :attempts, :eventId)
+                    :deliveryId, :plugin, :target, :trigger, :detail, :reference, :attempts, :eventId, :instanceId)
             RETURNING id
             """,
         )
@@ -48,6 +48,7 @@ class PostgresAuditStore(private val jdbc: JdbcClient) : AuditPort {
             .param("reference", event.reference)
             .param("attempts", event.attempts)
             .param("eventId", event.eventId)
+            .param("instanceId", event.instanceId)
             .query(Long::class.java)
             .single()
         return event.copy(id = id)
@@ -89,6 +90,7 @@ class PostgresAuditStore(private val jdbc: JdbcClient) : AuditPort {
         query.notificationId?.let { clauses += "notification_id = :notificationId"; params["notificationId"] = it }
         query.eventId?.let { clauses += "event_id = :eventId"; params["eventId"] = it }
         query.actor?.let { clauses += "actor = :actor"; params["actor"] = it }
+        query.instanceId?.let { clauses += "instance_id = :instanceId"; params["instanceId"] = it }
         query.types?.let {
             if (it.isEmpty()) clauses += "false" else { clauses += "type IN (:types)"; params["types"] = it.map { t -> t.name } }
         }
@@ -113,5 +115,6 @@ class PostgresAuditStore(private val jdbc: JdbcClient) : AuditPort {
         reference = getString("reference"),
         attempts = getObject("attempts") as Int?,
         eventId = getObject("event_id", UUID::class.java),
+        instanceId = getObject("instance_id", UUID::class.java),
     )
 }

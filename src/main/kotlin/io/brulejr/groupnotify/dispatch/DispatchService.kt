@@ -253,6 +253,7 @@ class DispatchService(
                     reference = reference,
                     attempts = outcome.attempts,
                     eventId = subject.eventId,
+                    instanceId = delivery.instance,
                 ),
             )
             DeliveryReport(delivery, instance?.name ?: "a deleted instance", summary, outcome)

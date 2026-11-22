@@ -23,6 +23,7 @@ data class AuditQuery(
     val notificationId: UUID? = null,
     val eventId: UUID? = null,
     val actor: String? = null,
+    val instanceId: UUID? = null,
     val types: Set<AuditEventType>? = null,
     val since: Instant? = null,
     val beforeId: Long? = null,

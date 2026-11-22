@@ -89,3 +89,13 @@ fields: credentials (encrypted, and shown afterwards only as *Saved — leave bl
 keep it*), where it sends, and the defaults its messages start with, marked *A
 default: a message may change it*. An instance a message or event still uses cannot
 be deleted; the console names them.
+
+**Alerts**: switch on *Send this group's alerts here* on an instance, best a private
+channel such as the organisers' Discord, not the list everyone reads. When one of the
+group's scheduled messages or event reminders fails after its retries, or is skipped
+for being too late, it is posted there: once an hour at most per failing instance, the
+failures in between counted into the next, and again when that instance sends once
+more. Nothing is posted through the instance that failed, nor for Send now or Test,
+whose results you see. The instance's bell button on Delivery plugins sends a test
+alert. Every alert is in History, as *Alerted* or *Recovered*. With `CONSOLE_URL` set,
+alerts link to the message or event.

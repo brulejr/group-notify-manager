@@ -59,6 +59,16 @@
                 <div class="invalid-feedback" th:text="${errors.get('name')}"></div>
                 <div class="form-text">What authors pick it by. Unique within the group.</div>
               </div>
+              <div class="col-12">
+                <input type="hidden" name="alerts" value="false">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" role="switch" id="alerts" name="alerts" value="true" th:checked="${form.alerts}">
+                  <label class="form-check-label fw-semibold" for="alerts"><i class="bi bi-bell me-1"></i>Send this group's alerts here</label>
+                </div>
+                <div class="form-text">When one of the group's scheduled messages or event reminders fails or is skipped, it is posted
+                  here, at most once an hour per failing instance, and again when it recovers. Best a private channel, such as a Discord
+                  one for the group's organisers: not the list everyone reads.</div>
+              </div>
             </div>
           </div>
         </div>

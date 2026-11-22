@@ -31,6 +31,7 @@ Bruno collection in `bruno/group-notify-manager` covers every call.
 | `PUT /api/events/{id}/notes` | `{"occurrence": "<instant>", "note": "…", "format": "MARKDOWN"}` (or `HTML`); blank removes it |
 | `POST /api/events/{id}/pause`, `/resume` | |
 | `POST /api/events/{id}/send?reminderId=[&deliveryId=]` | Sends one reminder now, for the next occurrence, through its deliveries or one of them |
+| `POST /api/alerts/test/{instanceId}` | Sends a test alert through an instance: `{"sent", "instance", "detail"}`. Those who manage its group |
 | `GET /api/instances[?group=]`, `GET /api/instances/{id}` | Delivery instances you may see, secrets masked |
 | `POST /api/instances`, `PUT, DELETE /api/instances/{id}` | Provision, change, delete: those who manage the group, and admins; 409 when one in use is deleted |
 | `GET /api/users`, `GET /api/users/{username}` | Who has used the system: when last seen, visits, last address and browser, their groups, actions in the last 30 days. Admins |

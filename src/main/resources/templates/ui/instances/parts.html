@@ -19,13 +19,16 @@
         <i class="bi plugin-icon" th:classappend="'bi-' + ${r.icon}"></i>
         <div class="min-w-0 flex-grow-1">
           <div class="fw-medium"><span th:text="${r.instance.name}">Club announcements</span>
-            <span class="badge text-bg-warning ms-1" th:unless="${r.ready}" th:title="${r.reason}">not ready</span></div>
+            <span class="badge text-bg-warning ms-1" th:unless="${r.ready}" th:title="${r.reason}">not ready</span>
+            <span class="badge text-bg-info ms-1" th:if="${r.instance.alerts}" title="This group's failures are posted here"><i class="bi bi-bell me-1"></i>Alerts</span></div>
           <div class="small text-body-secondary text-truncate" th:text="${r.pluginName} + ' · ' + ${r.summary}">groups.io · brulenet</div>
           <div class="small text-body-secondary"
                th:text="${r.usedBy.isEmpty()} ? 'Not used by anything' : 'Used by ' + ${r.usedBy.size()} + ' message or event' + (${r.usedBy.size() == 1} ? '' : 's')"
                th:title="${#strings.listJoin(r.usedBy, ', ')}">used by</div>
         </div>
         <th:block th:if="${r.canManage}">
+          <button type="button" class="btn btn-sm btn-outline-secondary" title="Send test alert" hx-swap="none" th:if="${r.instance.alerts}"
+                  th:hx-post="@{/ui/alerts/test/{id}(id=${r.instance.id})}"><i class="bi bi-bell"></i></button>
           <a class="btn btn-sm btn-outline-secondary" th:href="@{/ui/instances/{id}/edit(id=${r.instance.id})}" title="Edit"><i class="bi bi-pencil"></i></a>
           <button type="button" class="btn btn-sm btn-outline-danger" title="Delete" hx-swap="none" data-confirm-label="Delete"
                   th:hx-delete="@{/ui/instances/{id}(id=${r.instance.id})}"

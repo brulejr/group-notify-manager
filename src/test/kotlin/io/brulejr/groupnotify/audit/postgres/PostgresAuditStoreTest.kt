@@ -49,6 +49,16 @@ class PostgresAuditStoreTest {
     }
 
     @Test
+    fun `an event keeps the instance it went through, and can be found by it`() {
+        val instance = UUID.randomUUID()
+        val through = store.record(event(AuditEventType.FAILED).copy(instanceId = instance))
+        store.record(event(AuditEventType.FAILED))
+
+        assertEquals(listOf(through), store.find(AuditQuery(instanceId = instance)))
+        assertEquals(mapOf(AuditEventType.FAILED to 1L), store.count(AuditQuery(instanceId = instance)))
+    }
+
+    @Test
     fun `old events are purged`() {
         store.record(event(AuditEventType.SENT, at = now.minus(400, ChronoUnit.DAYS)))
         store.record(event(AuditEventType.SENT))

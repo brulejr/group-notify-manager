@@ -39,6 +39,7 @@ data class AuditEvent(
     val reference: String? = null,
     val attempts: Int? = null,
     val eventId: UUID? = null,
+    val instanceId: UUID? = null,
 ) {
     companion object {
         const val SCHEDULER = "scheduler"

@@ -53,10 +53,12 @@ class Fixtures(
     val clock: TestClock = TestClock(),
     deliveryDatafill: DeliveryDatafill = DeliveryDatafill(retryBackoff = Duration.ZERO),
     dispatchDatafill: DispatchDatafill = DispatchDatafill(threads = 1),
+    alertDatafill: io.brulejr.groupnotify.alert.AlertDatafill = io.brulejr.groupnotify.alert.AlertDatafill(),
 ) {
     val groups = GroupService(GroupDatafill(pattern = "notify_.*"))
     val auditStore = InMemoryAuditStore()
-    val audit = AuditService(auditStore, groups, AuditDatafill(store = StoreType.MEMORY), clock)
+    private val listeners = mutableListOf<io.brulejr.groupnotify.audit.AuditListener>()
+    val audit = AuditService(auditStore, groups, AuditDatafill(store = StoreType.MEMORY), clock) { listeners }
     val deliveries = DeliveryService(plugins.map { PluginHandle(it, "test") }, deliveryDatafill) { }
     val notificationStore = InMemoryNotificationStore()
     val eventStore = InMemoryEventStore()
@@ -76,6 +78,9 @@ class Fixtures(
     val content = ContentService(ContentDatafill())
     val events = EventService(eventStore, groups, instances, content, audit, EventDatafill(store = StoreType.MEMORY), "America/New_York", clock)
     val dispatch = DispatchService(notifications, events, deliveries, instances, content, audit, groups, dispatchDatafill, clock)
+
+    /** Told of every audit event, as in the application; nothing is alerted until an instance is marked for alerts. */
+    val alerts = io.brulejr.groupnotify.alert.AlertService(audit, instances, deliveries, content, groups, alertDatafill, clock).also { listeners += it }
 
     /**
      * A club meeting every Tuesday at 7 PM from 10 November 2026, a Tuesday, with a

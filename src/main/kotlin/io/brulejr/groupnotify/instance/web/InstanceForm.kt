@@ -21,8 +21,9 @@ data class InstanceForm(
     val plugin: String = "",
     val name: String = "",
     val config: Map<String, String> = emptyMap(),
+    val alerts: Boolean = false,
 ) {
-    fun toDraft() = InstanceDraft(group, plugin, name, config)
+    fun toDraft() = InstanceDraft(group, plugin, name, config, alerts)
 
     companion object {
         fun from(params: MultiValueMap<String, String>) = InstanceForm(
@@ -33,10 +34,11 @@ data class InstanceForm(
             config = params.filterKeys { it.startsWith("config.") }
                 .mapKeys { it.key.removePrefix("config.") }
                 .mapValues { it.value.lastOrNull().orEmpty() },
+            alerts = params["alerts"]?.lastOrNull() == "true",
         )
 
         /** A stored instance as its form shows it: with [masked] configuration, never a secret. */
         fun of(instance: PluginInstance, masked: Map<String, String>) =
-            InstanceForm(instance.group, instance.plugin, instance.name, masked)
+            InstanceForm(instance.group, instance.plugin, instance.name, masked, instance.alerts)
     }
 }

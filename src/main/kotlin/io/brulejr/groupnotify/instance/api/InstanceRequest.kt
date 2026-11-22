@@ -19,6 +19,7 @@ data class InstanceRequest(
     val plugin: String = "",
     val name: String = "",
     val config: Map<String, String> = emptyMap(),
+    val alerts: Boolean = false,
 ) {
-    fun toDraft() = InstanceDraft(group, plugin, name, config)
+    fun toDraft() = InstanceDraft(group, plugin, name, config, alerts)
 }

@@ -41,10 +41,11 @@ class PostgresInstanceStore(
     override fun save(instance: PluginInstance) {
         jdbc.sql(
             """
-            INSERT INTO plugin_instances (id, group_name, plugin, name, config, created_by, created_at, updated_by, updated_at)
-            VALUES (:id, :group, :plugin, :name, CAST(:config AS jsonb), :createdBy, :createdAt, :updatedBy, :updatedAt)
+            INSERT INTO plugin_instances (id, group_name, plugin, name, config, created_by, created_at, updated_by, updated_at, alerts)
+            VALUES (:id, :group, :plugin, :name, CAST(:config AS jsonb), :createdBy, :createdAt, :updatedBy, :updatedAt, :alerts)
             ON CONFLICT (id) DO UPDATE
-            SET name = EXCLUDED.name, config = EXCLUDED.config, updated_by = EXCLUDED.updated_by, updated_at = EXCLUDED.updated_at
+            SET name = EXCLUDED.name, config = EXCLUDED.config, updated_by = EXCLUDED.updated_by, updated_at = EXCLUDED.updated_at,
+                alerts = EXCLUDED.alerts
             """,
         )
             .param("id", instance.id)
@@ -56,6 +57,7 @@ class PostgresInstanceStore(
             .param("createdAt", instance.createdAt.toTimestamptz())
             .param("updatedBy", instance.updatedBy)
             .param("updatedAt", instance.updatedAt.toTimestamptz())
+            .param("alerts", instance.alerts)
             .update()
     }
 
@@ -72,6 +74,7 @@ class PostgresInstanceStore(
         createdAt = checkNotNull(getInstant("created_at")),
         updatedBy = getString("updated_by"),
         updatedAt = checkNotNull(getInstant("updated_at")),
+        alerts = getBoolean("alerts"),
     )
 
     private companion object {

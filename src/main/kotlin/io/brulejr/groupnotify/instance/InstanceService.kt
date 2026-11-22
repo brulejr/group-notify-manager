@@ -57,6 +57,9 @@ class InstanceService(
     /** A group's instances, for the notifications of that group to choose among. */
     fun forGroup(group: String): List<PluginInstance> = store.list(setOf(group))
 
+    /** [group]'s instances marked to receive its alerts; every group's when null. */
+    fun alertTargets(group: String?): List<PluginInstance> = (if (group == null) store.list(null) else forGroup(group)).filter { it.alerts }
+
     /** Whether [user] may create, change and delete [group]'s instances: a member of it, or an admin. */
     fun canManage(user: NotifyUser, group: String) = groups.canEdit(user, group) && groups.isNotificationGroup(group)
 
@@ -202,6 +205,7 @@ class InstanceService(
                 createdAt = existing?.createdAt ?: now,
                 updatedBy = user.actor,
                 updatedAt = now,
+                alerts = draft.alerts,
             ),
         )
     }
@@ -219,6 +223,7 @@ class InstanceService(
         val afterOpen = open(after)
         return buildList {
             if (before.name != after.name) add("name ${before.name} → ${after.name}")
+            if (before.alerts != after.alerts) add(if (after.alerts) "alerts on" else "alerts off")
             fields.forEach { field ->
                 val was = if (field.key in secrets) beforeOpen?.get(field.key) else before.config[field.key]
                 val now = if (field.key in secrets) afterOpen[field.key] else after.config[field.key]

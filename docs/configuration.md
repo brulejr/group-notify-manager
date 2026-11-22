@@ -34,6 +34,10 @@ of the boot jar) imports `.env` and sets the development user.
 | `notify.instances.store` | `INSTANCE_STORE` | `postgres` | or `memory` |
 | `notify.events.store` | `EVENT_STORE` | `postgres` | or `memory` |
 | `notify.events.max-reminders`, `.max-properties`, `.max-deliveries` | | 20, 30, 10 | Per event |
+| `notify.alerts.enabled` | | true | Off: no failure alerts |
+| `notify.alerts.quiet-period` | | 1h | After an alert about an instance, or a message's skipped run, further ones are held back this long and counted into the next |
+| `notify.alerts.recovery`, `.skipped` | | true, true | Say when a failing instance sends again; alert skipped runs |
+| `notify.alerts.console-url` | `CONSOLE_URL` | none | The console's public address, e.g. `https://notify.example.org`: alerts link to the message or event |
 | `notify.users.store` | `USER_STORE` | `postgres` | or `memory` |
 | `notify.users.touch-interval`, `.visit-gap` | | 5m, 30m | A person's record is written at most every touch-interval; requests further apart than visit-gap start a new visit |
 | `notify.users.lldap-url` | `LLDAP_URL` | none | When set, the Users page links each person to their LLDAP page |

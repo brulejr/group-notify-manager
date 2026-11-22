@@ -34,8 +34,9 @@ class AuditConfig {
         }
 
     @Bean
-    fun auditService(store: AuditPort, groups: GroupService, datafill: AuditDatafill, clock: Clock) =
-        AuditService(store, groups, datafill, clock)
+    /** Listeners are looked up when an event is recorded, as they depend on this service. */
+    fun auditService(store: AuditPort, groups: GroupService, datafill: AuditDatafill, clock: Clock, listeners: ObjectProvider<AuditListener>) =
+        AuditService(store, groups, datafill, clock) { listeners.orderedStream().toList() }
 
     @Bean
     fun auditHealthIndicator(service: AuditService, clock: Clock) = AuditHealthIndicator(service, clock)

@@ -27,6 +27,7 @@ class AuditService(
     private val groups: GroupService,
     private val datafill: AuditDatafill,
     private val clock: Clock,
+    private val listeners: () -> List<AuditListener> = { emptyList() },
 ) {
 
     private val log = LoggerFactory.getLogger(AuditService::class.java)
@@ -35,6 +36,13 @@ class AuditService(
     fun record(event: AuditEvent): AuditEvent {
         val stored = store.record(event)
         purgeIfDue()
+        listeners().forEach { listener ->
+            try {
+                listener.recorded(stored)
+            } catch (e: Exception) {
+                log.warn("an audit listener failed on {} '{}'", stored.type, stored.notificationTitle, e)
+            }
+        }
         return stored
     }
 
@@ -47,6 +55,12 @@ class AuditService(
 
     /** Every group's counts since [since], for health. */
     fun counts(since: Instant): Map<AuditEventType, Long> = store.count(AuditQuery(since = since))
+
+    /** Events matching [query], newest first, whatever group: for features acting on their own, never for a viewer. */
+    fun find(query: AuditQuery): List<AuditEvent> = store.find(query)
+
+    /** How many events of each type match [query], whatever group: for features acting on their own. */
+    fun count(query: AuditQuery): Map<AuditEventType, Long> = store.count(query)
 
     /** Per person, what they did since [since]: for the admins' Users page, whoever's groups. */
     fun activity(since: Instant): Map<String, ActorActivity> = store.activity(since)

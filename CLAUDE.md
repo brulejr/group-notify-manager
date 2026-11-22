@@ -23,7 +23,9 @@ One package per feature: `notification/`, `event/` (events and their reminders),
 `dispatch/` (the scheduler and Send now, for both),
 `delivery/` (the plugin host: loading, settings, retries, secret masking), `instance/`
 (plugins provisioned per group as named instances, their encrypted secrets), `content/`
-(Markdown, sanitised HTML, text, placeholders), `audit/`, `group/`, `console/`.
+(Markdown, sanitised HTML, text, placeholders), `audit/`, `alert/` (failure alerts to the
+instances a group marks for them, told of each audit event through `AuditListener`), `user/`
+(the admins' Users page), `group/`, `console/`.
 Following the conventions, each has exactly one `*Config` declaring its beans, a
 validated `*Datafill`, a `*Service` holding its logic, a REST controller under `api/`,
 a page controller under `web/`, a `*HealthIndicator` and a `*InfoContributor`.

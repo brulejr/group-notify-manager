@@ -17,4 +17,5 @@ data class InstanceDraft(
     val plugin: String,
     val name: String,
     val config: Map<String, String> = emptyMap(),
+    val alerts: Boolean = false,
 )

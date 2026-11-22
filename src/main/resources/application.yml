@@ -90,6 +90,16 @@ notify:
   events:
     store: ${EVENT_STORE:postgres}
 
+  # Failure alerts, posted to each group's instances marked "Send alerts here": a
+  # scheduled send that failed, a run skipped for being late, and recovery. One alert
+  # per failing instance every quiet-period; console-url makes alerts link to the console.
+  alerts:
+    enabled: true
+    quiet-period: 1h
+    recovery: true
+    skipped: true
+    console-url: ${CONSOLE_URL:}
+
   # Who uses the system, for the admins' Users page. A visit is requests no further apart
   # than visit-gap; a person's record is written at most every touch-interval. With
   # lldap-url set, each person links to their LLDAP page.

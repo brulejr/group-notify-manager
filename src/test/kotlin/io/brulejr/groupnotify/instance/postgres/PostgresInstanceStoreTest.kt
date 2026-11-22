@@ -47,6 +47,9 @@ class PostgresInstanceStoreTest {
         assertEquals("Renamed", updated.name)
         assertEquals("notify_club", updated.group, "the group is fixed once created")
         assertEquals(mapOf("group" to "other"), updated.config)
+
+        store.save(updated.copy(alerts = true))
+        assertEquals(true, store.find(i.id)!!.alerts, "marked for alerts")
     }
 
     @Test

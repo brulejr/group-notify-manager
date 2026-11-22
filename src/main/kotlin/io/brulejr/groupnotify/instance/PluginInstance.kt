@@ -33,4 +33,5 @@ data class PluginInstance(
     val createdAt: Instant,
     val updatedBy: String,
     val updatedAt: Instant,
+    val alerts: Boolean = false,
 )
